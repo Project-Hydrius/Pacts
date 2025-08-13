@@ -1,0 +1,36 @@
+{
+    "type": "object",
+    "properties": {
+        "date": {
+            "type": "string",
+            "format": "date-time"
+        },
+        "request_type": {
+            "type": "string"
+        },
+        "response_status": {
+            "type": "string"
+        },
+        "target_id": {
+            "type": "string"
+        },
+        "response_message": {
+            "type": "string"
+        },
+        "inventory": {
+            "type": "array",
+            "description": "Array of inventory items",
+            "items": {
+                "description": "Array of inventory items",
+                "$ref": "inventory_item.json"
+            }
+        }
+    },
+    "required": [
+        "date",
+        "request_type",
+        "response_status",
+        "target_id"
+    ],
+    "additionalProperties": false
+}

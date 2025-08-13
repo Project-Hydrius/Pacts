@@ -1,0 +1,30 @@
+{
+    "type": "object",
+    "properties": {
+        "id": {
+            "type": "string"
+        },
+        "members": {
+            "type": "array",
+            "description": "Array of profile members",
+            "items": {
+                "type": "object",
+                "description": "Array of profile members",
+                "$ref": "profile_member.json"
+            }
+        },
+        "invitations": {
+            "type": "array",
+            "description": "Array of profile invitations",
+            "items": {
+                "type": "object",
+                "description": "Array of profile invitations",
+                "$ref": "profile_invitation.json"
+            }
+        }
+    },
+    "required": [
+        "id",
+        "members"
+    ]
+}

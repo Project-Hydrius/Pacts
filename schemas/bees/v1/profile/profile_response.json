@@ -1,0 +1,31 @@
+{
+    "type": "object",
+    "properties": {
+        "date": {
+            "type": "string",
+            "format": "date-time"
+        },
+        "request_type": {
+            "type": "string"
+        },
+        "response_status": {
+            "type": "string"
+        },
+        "target_id": {
+            "type": "string"
+        },
+        "response_message": {
+            "type": "string"
+        },
+        "profile": {
+            "type": "object",
+            "description": "Profile data",
+            "$ref": "profile.json"
+        }
+    },
+    "required": [
+        "date",
+        "request_type",
+        "target_id"
+    ]
+}

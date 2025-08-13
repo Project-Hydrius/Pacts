@@ -1,0 +1,18 @@
+{
+    "type": "object",
+    "properties": {
+        "sender_id": {
+            "type": "string"
+        },
+        "receiver_id": {
+            "type": "string"
+        },
+        "status": {
+            "type": "string"
+        },
+        "created_at": {
+            "type": "string",
+            "format": "date-time"
+        }
+    }
+}

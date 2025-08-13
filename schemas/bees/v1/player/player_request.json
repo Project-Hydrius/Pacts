@@ -1,0 +1,20 @@
+{
+    "type": "object",
+    "properties": {
+        "date": {
+            "type": "string",
+            "format": "date-time"
+        },
+        "request_type": {
+            "type": "string"
+        },
+        "target_id": {
+            "type": "string"
+        }
+    },
+    "required": [
+        "date",
+        "request_type",
+        "target_id"
+    ]
+}

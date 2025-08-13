@@ -1,0 +1,41 @@
+{
+	"type": "object",
+	"properties": {
+		"date": {
+			"type": "string",
+			"format": "date-time"
+		},
+		"request_type": {
+			"type": "string"
+		},
+		"response_status": {
+			"type": "string"
+		},
+		"target_id": {
+			"type": "string"
+		},
+		"response_message": {
+			"type": "string"
+		},
+		"inventory": {
+			"type": "array",
+			"description": "Array of inventory items",
+			"items": {
+				"$ref": "../inventory/inventory_item.json"
+			}
+		},
+		"invitations": {
+			"type": "array",
+			"description": "Array of invitations",
+			"items": {
+				"$ref": "../profile/profile_invitation.json"
+			}
+		}
+	},
+	"required": [
+		"date",
+		"request_type",
+		"response_status",
+		"target_id"
+	]
+}

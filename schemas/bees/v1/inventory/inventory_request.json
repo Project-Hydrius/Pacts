@@ -1,0 +1,76 @@
+{
+    "type": "object",
+    "properties": {
+        "date": {
+            "type": "string",
+            "format": "date-time"
+        },
+        "request_type": {
+            "type": "string"
+        },
+        "target_id": {
+            "type": "string"
+        },
+        "profile_id": {
+            "type": "string"
+        },
+        "inventory": {
+            "type": "array",
+            "description": "Array of inventory items",
+            "items": {
+                "description": "Array of inventory items",
+                "$ref": "inventory_item.json"
+            }
+        },
+        "items": {
+            "type": "array",
+            "description": "Array of inventory items",
+            "items": {
+                "description": "Array of inventory items",
+                "$ref": "inventory_item.json"
+            }
+        },
+        "slot": {
+            "type": "number"
+        }
+    },
+    "required": [
+        "date",
+        "request_type",
+        "target_id",
+        "profile_id"
+    ],
+    "oneOf": [
+        {
+            "required": [
+                "inventory"
+            ]
+        },
+        {
+            "required": [
+                "items"
+            ]
+        },
+        {
+            "required": [
+                "slot"
+            ]
+        },
+        {}
+    ],
+    "not": {
+        "allOf": [
+            {
+                "required": [
+                    "inventory"
+                ]
+            },
+            {
+                "required": [
+                    "items"
+                ]
+            }
+        ]
+    },
+    "additionalProperties": false
+}
