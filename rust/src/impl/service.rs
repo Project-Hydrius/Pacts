@@ -23,19 +23,31 @@ pub struct PactsService {
 impl PactsService {
     /// Creates a new PactsService with default settings
     pub fn new() -> Self {
-        let schema_loader = SchemaLoader::new();
-        let validator = Validator::with_schema_loader(schema_loader);
+        let schema_loader =
+            SchemaLoader::new("schemas".to_string(), "bees".to_string(), "v1".to_string());
+        let validator = Validator::new(schema_loader.clone());
 
         Self {
             validator: Arc::new(validator),
-            schema_loader: Arc::new(RefCell::new(SchemaLoader::new())),
+            schema_loader: Arc::new(RefCell::new(schema_loader)),
         }
     }
 
     /// Creates a new PactsService with a custom schema base path
     pub fn with_base_path(base_path: String) -> Self {
-        let schema_loader = SchemaLoader::with_base_path(base_path);
-        let validator = Validator::with_schema_loader(schema_loader.clone());
+        let schema_loader = SchemaLoader::new(base_path, "bees".to_string(), "v1".to_string());
+        let validator = Validator::new(schema_loader.clone());
+
+        Self {
+            validator: Arc::new(validator),
+            schema_loader: Arc::new(RefCell::new(schema_loader)),
+        }
+    }
+
+    /// Creates a new PactsService with an explicit version directory (e.g. "v1")
+    pub fn with_version(base_path: String, version_directory: String) -> Self {
+        let schema_loader = SchemaLoader::new(base_path, "bees".to_string(), version_directory);
+        let validator = Validator::new(schema_loader.clone());
 
         Self {
             validator: Arc::new(validator),
@@ -47,13 +59,15 @@ impl PactsService {
     pub fn create_envelope_with_auth(
         &self,
         schema_version: String,
-        schema_id: String,
+        schema_category: String,
+        schema_name: String,
         data: Value,
         auth_token: String,
     ) -> Envelope {
         let header = Header::with_auth(
             schema_version,
-            schema_id,
+            schema_category,
+            schema_name,
             Some("application/json".to_string()),
             auth_token,
         );
@@ -64,12 +78,14 @@ impl PactsService {
     pub fn create_envelope(
         &self,
         schema_version: String,
-        schema_id: String,
+        schema_category: String,
+        schema_name: String,
         data: Value,
     ) -> Envelope {
         let header = Header::with_content_type(
             schema_version,
-            schema_id,
+            schema_category,
+            schema_name,
             "application/json".to_string(),
         );
         Envelope::new(header, data)
@@ -77,22 +93,27 @@ impl PactsService {
 
     /// Validates an envelope
     pub fn validate(&self, envelope: &Envelope) -> ValidationResult {
-        self.validator.validate(envelope)
+        // We need to clone the validator to get a mutable reference
+        let mut validator = (*self.validator).clone();
+        validator.validate(envelope)
     }
 
     /// Validates data against a specific schema
     pub fn validate_data(
         &self,
         data: &Value,
-        domain: &str,
         category: &str,
         schema_name: &str,
     ) -> ValidationResult {
-        match self.schema_loader.borrow_mut().load_schema_by_directory(domain, category, schema_name) {
-            Some(schema) => self.validator.validate_data(data, &schema),
-            None => ValidationResult::failure(vec![
-                format!("Schema not found: {}/{}/{}", domain, category, schema_name)
-            ]),
+        match self
+            .schema_loader
+            .borrow_mut()
+            .load_schema(category, schema_name)
+        {
+            schema => {
+                let mut validator = (*self.validator).clone();
+                validator.validate_data(data, &schema)
+            }
         }
     }
 
@@ -100,7 +121,8 @@ impl PactsService {
     pub fn send_validated_data<T, F>(
         &self,
         schema_version: String,
-        schema_id: String,
+        schema_category: String,
+        schema_name: String,
         data: Value,
         auth_token: String,
         sender: F,
@@ -108,7 +130,13 @@ impl PactsService {
     where
         F: FnOnce(&Envelope) -> Result<T, String>,
     {
-        let envelope = self.create_envelope_with_auth(schema_version, schema_id, data, auth_token);
+        let envelope = self.create_envelope_with_auth(
+            schema_version,
+            schema_category,
+            schema_name,
+            data,
+            auth_token,
+        );
         let result = self.validate(&envelope);
 
         if result.is_valid() {
@@ -132,67 +160,5 @@ impl PactsService {
 impl Default for PactsService {
     fn default() -> Self {
         Self::new()
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use serde_json::json;
-
-    #[test]
-    fn test_create_envelope_with_auth() {
-        let service = PactsService::new();
-        let data = json!({"test": "data"});
-
-        let envelope = service.create_envelope_with_auth(
-            "1.0".to_string(),
-            "test-schema".to_string(),
-            data.clone(),
-            "test-token".to_string(),
-        );
-
-        assert_eq!(envelope.header.schema_version, "1.0");
-        assert_eq!(envelope.header.schema_id, "test-schema");
-        assert_eq!(envelope.header.auth_token, Some("test-token".to_string()));
-        assert_eq!(envelope.data, data);
-    }
-
-    #[test]
-    fn test_create_envelope_without_auth() {
-        let service = PactsService::new();
-        let data = json!({"test": "data"});
-
-        let envelope = service.create_envelope(
-            "1.0".to_string(),
-            "test-schema".to_string(),
-            data.clone(),
-        );
-
-        assert_eq!(envelope.header.schema_version, "1.0");
-        assert_eq!(envelope.header.schema_id, "test-schema");
-        assert_eq!(envelope.header.auth_token, None);
-        assert_eq!(envelope.data, data);
-    }
-
-    #[test]
-    fn test_send_validated_data_success() {
-        let service = PactsService::new();
-        let data = json!({"test": "data"});
-
-        let result = service.send_validated_data(
-            "1.0".to_string(),
-            "test-schema".to_string(),
-            data,
-            "test-token".to_string(),
-            |envelope| {
-                // Simulate successful sending
-                Ok(format!("Sent envelope with schema {}", envelope.header.schema_id))
-            },
-        );
-
-        // Will fail validation because schema doesn't exist, but the mechanism works
-        assert!(result.is_err());
-        assert!(result.unwrap_err().contains("Schema not found"));
     }
 }

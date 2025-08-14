@@ -1,4 +1,4 @@
-# Pacts - Schema Validation for Microservices
+# Pacts - Schema Validation
 
 A comprehensive schema validation system for JSON payload communication between Game Servers and Microservices, implemented in both Java and Rust. Designed for seamless integration with Spring Boot/RabbitMQ (Java) and Actix/RabbitMQ (Rust).
 
@@ -6,22 +6,30 @@ A comprehensive schema validation system for JSON payload communication between 
 
 ```
 pacts/
-├── java/                    # Java implementation
+├── java/                   # Java implementation
 │   ├── pom.xml             # Maven configuration
 │   └── src/main/java/net/hydrius/pacts/
-│       ├── Envelope.java   # Wraps data with metadata
-│       ├── Header.java     # Contains envelope metadata
-│       ├── Validator.java  # Validates data against schemas
-│       ├── ValidationResult.java # Holds validation results
-│       └── SchemaLoader.java # Loads schemas from various sources
-├── rust/                   # Rust implementation
+│       ├── model/
+│       │       ├── Envelope.java   # Wraps data with metadata
+│       │       └── Header.java     # Contains envelope metadata
+│       ├── core/
+│       │       ├── Validator.java  # Validates data against schemas
+│       │       ├── ValidationResult.java # Holds validation results
+│       │       └── SchemaLoader.java # Loads schemas from various sources
+│       ├── impl/
+│       │       └── PactsService.java # Service class for convenient Pacts operations
+├── rust/                  # Rust implementation
 │   ├── Cargo.toml         # Cargo configuration
 │   └── src/
 │       ├── lib.rs         # Main library file
-│       ├── envelope.rs    # Envelope struct
-│       ├── header.rs      # Header struct
-│       ├── validator.rs   # Validator struct
-│       └── schema_loader.rs # Schema loader struct
+│       ├── model/
+│       │       ├── envelope.rs    # Envelope model
+│       │       └── header.rs      # Header model
+│       ├── core/
+│       │       ├── schema_loader.rs # Schema loader struct
+│       │       └── validator.rs   # Validator struct
+│       ├── impl/ # Implementation
+│       │       └── service.rs # Service struct for convenient Pacts operations
 └── schemas/               # Schema files organized by domain and version
 ```
 
@@ -34,7 +42,8 @@ cd java
 mvn clean package
 ```
 
-The packaged JAR will include all schema files as resources, making deployment easier.
+The packaged JAR will include all schema files as resources (under `schemas/`), making deployment easier.
+The Rust crate embeds the same `schemas/` directory into the compiled library, and will load from embedded assets when files are not present on disk.
 
 ### Usage
 
@@ -44,7 +53,7 @@ The packaged JAR will include all schema files as resources, making deployment e
 import net.hydrius.pacts.*;
 
 // Create a header with authentication
-Header header = new Header("1", "player", "application/json", "your-auth-token");
+Header header = new Header("v1", "player", "player_request", "application/json", "your-auth-token");
 
 // Create data
 Map<String, Object> playerRequestData = new HashMap<>();
@@ -72,41 +81,41 @@ if (result.isValid()) {
 You can also load schemas by directory structure, where the version is automatically extracted from `v{number}` directories.
 
 ```java
-import net.hydrius.pacts.SchemaLoader;
+import net.hydrius.pacts.core.SchemaLoader;
 import com.fasterxml.jackson.databind.JsonNode;
 
-// Create a schema loader
-SchemaLoader schemaLoader = new SchemaLoader("schemas");
+// Create a schema loader and explicitly set version directory
+SchemaLoader schemaLoader = new SchemaLoader("schemas", "bees", "v1");
 
-// Load a schema using directory structure: domain/category/schemaName
-// This automatically finds the version from v{number} directories
-JsonNode inventorySchema = schemaLoader.loadSchemaByDirectory("bees", "inventory", "inventory_item");
-JsonNode playerSchema = schemaLoader.loadSchemaByDirectory("bees", "player", "player_request");
+// Load a schema by category and name, schema loader will automatically load from the correct version directory and domain.
+JsonNode inventorySchema = schemaLoader.loadSchema("inventory", "inventory_item");
+JsonNode playerSchema = schemaLoader.loadSchema("player", "player_request");
 
 // Schemas are cached for performance
-JsonNode cachedSchema = schemaLoader.loadSchemaByDirectory("bees", "inventory", "inventory_item");
+JsonNode cachedSchema = schemaLoader.loadSchema("inventory", "inventory_item");
 ```
 
 **Directory Structure Support:**
 
-- Automatically finds version directories (e.g., `v1`, `v2`)
+- Can explicitly select version directories (e.g., `v1`, `v2`) via constructor
 - Follows path: `schemas/{domain}/{version}/{category}/{schemaName}.json`
 - Includes caching for improved performance
-- Returns `null` for non-existent schemas
-- Automatically loads from packaged resources if not found on filesystem
 
 #### Using PactsService
 
 The PactsService class provides convenient methods for common operations:
 
 ```java
-import net.hydrius.pacts.*;
+import net.hydrius.pacts.impl.PactsService;
+import net.hydrius.pacts.core.ValidationResult;
+import net.hydrius.pacts.model.Envelope;
 
-// Create service
-PactsService pactsService = new PactsService();
+// Create service with explicit version directory
+SchemaLoader schemaLoader = new SchemaLoader("schemas", "bees", "v1");
+PactsService pactsService = new PactsService(schemaLoader);
 
 // Create and validate envelope with authentication
-Envelope envelope = pactsService.createEnvelope("1", "player_request", playerData, "auth-token");
+Envelope envelope = pactsService.createEnvelope("player", "player_request", playerData, "auth-token");
 
 ValidationResult result = pactsService.validate(envelope);
 if (result.isValid()) {
@@ -116,7 +125,7 @@ if (result.isValid()) {
 
 // Validate data against a specific schema
 ValidationResult dataResult = pactsService.validateData(
-    inventoryData, "bees", "inventory", "inventory_item"
+    inventoryData, "inventory", "inventory_item"
 );
 ```
 
@@ -126,17 +135,25 @@ For Spring Boot applications, create a configuration bean:
 
 ```java
 import org.springframework.context.annotation.*;
-import net.hydrius.pacts.*;
+import net.hydrius.pacts.impl.PactsService;
+import net.hydrius.pacts.core.SchemaLoader;
+import net.hydrius.pacts.core.Validator;
 
 @Configuration
 public class PactsConfiguration {
     
-    @Value("${pacts.schema.base-path:schemas}")
-    private String schemaBasePath;
+    @Value("${pacts.schema.root}")
+    private String schemaRoot;
     
+    @Value("${pacts.schema.domain}")
+    private String domain;
+
+    @Value("${pacts.schema.version}")
+    private String version;
+
     @Bean
     public SchemaLoader schemaLoader() {
-        return new SchemaLoader(schemaBasePath);
+        return new SchemaLoader(schemaRoot, domain, version);
     }
     
     @Bean
@@ -169,7 +186,7 @@ public class GameService {
         data.put("date", Instant.now().toString());
         
         // Create and validate envelope
-        Envelope envelope = pactsService.createEnvelope("1", "player_request", data, authToken);
+        Envelope envelope = pactsService.createEnvelope("v1", "player", "player_request", data, authToken);
         
         ValidationResult result = pactsService.validate(envelope);
         if (result.isValid()) {
@@ -221,8 +238,9 @@ Configuration properties:
 
 ```properties
 # application.properties
-pacts.schema.base-path=schemas
-pacts.schema.cache.enabled=true
+pacts.schema.root=schemas
+pacts.schema.domain=bees
+pacts.schema.version=v1
 ```
 
 ## Rust Implementation
@@ -244,8 +262,9 @@ use serde_json::json;
 
 // Create a header with authentication
 let header = Header::with_auth(
-    "1".to_string(), 
+    "v1".to_string(), 
     "player".to_string(),
+    "player_request".to_string(),
     Some("application/json".to_string()),
     "your-auth-token".to_string()
 );
@@ -278,23 +297,20 @@ You can also load schemas by directory structure, where the version is automatic
 
 ```rust
 use pacts::schema_loader::SchemaLoader;
-use serde_json::Value;
 
-// Create a schema loader
-let mut schema_loader = SchemaLoader::with_base_path("schemas".to_string());
+// Create a schema loader with explicit version (recommended)
+let mut schema_loader = SchemaLoader::new("schemas".to_string(), "bees".to_string(), "v1".to_string());
 
-// Load a schema using directory structure: domain/category/schemaName
-// This automatically finds the version from v{number} directories
-let inventory_schema = schema_loader.load_schema_by_directory("bees", "inventory", "inventory_item");
-let player_schema = schema_loader.load_schema_by_directory("bees", "player", "player_request");
+// Load schemas by domain/category/name
+let inventory_schema = schema_loader.load_schema("inventory", "inventory_item");
+let player_schema = schema_loader.load_schema("player", "player_request");
 
-// Schemas are cached for performance
-let cached_schema = schema_loader.load_schema_by_directory("bees", "inventory", "inventory_item");
+// If files are not present on disk, the loader will fall back to embedded assets bundled with the crate
 ```
 
 **Directory Structure Support:**
 
-- Automatically finds version directories (e.g., `v1`, `v2`)
+- Can explicitly select version directories (e.g., `v1`, `v2`) via constructor
 - Follows path: `schemas/{domain}/{version}/{category}/{schemaName}.json`
 - Includes caching for improved performance
 - Returns `Option<Value>` for proper error handling
@@ -307,8 +323,8 @@ The PactsService struct provides convenient methods:
 use pacts::{PactsService, ValidationResult};
 use serde_json::json;
 
-// Create service
-let service = PactsService::new();
+// Create service with explicit version directory
+let service = PactsService::with_version("schemas".to_string(), "bees".to_string(), "v1".to_string());
 
 // Create and validate envelope with authentication
 let data = json!({
@@ -318,7 +334,8 @@ let data = json!({
 });
 
 let envelope = service.create_envelope_with_auth(
-    "1".to_string(),
+    "v1".to_string(),
+    "player".to_string(),
     "player_request".to_string(),
     data,
     "auth-token".to_string()
@@ -339,7 +356,6 @@ let inventory_data = json!({
 
 let data_result = service.validate_data(
     &inventory_data,
-    "bees",
     "inventory", 
     "inventory_item"
 );
@@ -385,7 +401,8 @@ async fn handle_player_request(
     
     // Create envelope with authentication
     let header = Header::with_auth(
-        "1".to_string(),
+        "v1".to_string(),
+        "player".to_string(),
         "player_request".to_string(),
         Some("application/json".to_string()),
         auth_header.to_string(),
@@ -412,8 +429,8 @@ async fn handle_player_request(
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    let schema_loader = SchemaLoader::with_base_path("schemas".to_string());
-    let validator = Arc::new(Validator::with_schema_loader(schema_loader));
+    let schema_loader = SchemaLoader::new("schemas".to_string(), "bees".to_string(), "v1".to_string());
+    let validator = Arc::new(Validator::new(schema_loader));
     
     HttpServer::new(move || {
         App::new()

@@ -9,17 +9,15 @@
  * or distribution is strictly prohibited.
  */
 
-pub mod envelope;
-pub mod header;
-pub mod schema_loader;
-pub mod service;
-pub mod validator;
+pub mod core;
+pub mod r#impl;
+pub mod model;
 
-pub use envelope::Envelope;
-pub use header::Header;
-pub use schema_loader::SchemaLoader;
-pub use service::PactsService;
-pub use validator::{ValidationResult, Validator};
+pub use crate::r#impl::PactsService;
+pub use core::schema_loader::SchemaLoader;
+pub use core::validator::{ValidationResult, Validator};
+pub use model::Envelope;
+pub use model::Header;
 
 #[cfg(test)]
 mod tests {
@@ -30,13 +28,15 @@ mod tests {
     fn test_library_exports() {
         // Test that all public items are accessible
         let _envelope: Envelope = Envelope::new(
-            Header::new("1.0".to_string(), "test".to_string()),
+            Header::new("1.0".to_string(), "test".to_string(), "test".to_string()),
             json!({}),
         );
 
-        let _header: Header = Header::new("1.0".to_string(), "test".to_string());
-        let _validator: Validator = Validator::new();
-        let _schema_loader: SchemaLoader = SchemaLoader::new();
+        let _header: Header =
+            Header::new("1.0".to_string(), "test".to_string(), "test".to_string());
+        let _schema_loader: SchemaLoader =
+            SchemaLoader::new("schemas".to_string(), "bees".to_string(), "v1".to_string());
+        let _validator: Validator = Validator::new(_schema_loader.clone());
         let _validation_result: ValidationResult = ValidationResult::success();
 
         // If we get here, all exports are working
@@ -46,14 +46,20 @@ mod tests {
     #[test]
     fn test_basic_workflow() {
         // Test a complete workflow from envelope creation to validation
-        let header = Header::new("1.0".to_string(), "test-schema".to_string());
+        let header = Header::new(
+            "1.0".to_string(),
+            "test".to_string(),
+            "test-schema".to_string(),
+        );
         let data = json!({
             "id": "123",
             "name": "Test Item"
         });
 
         let envelope = Envelope::new(header, data);
-        let validator = Validator::new();
+        let schema_loader =
+            SchemaLoader::new("schemas".to_string(), "bees".to_string(), "v1".to_string());
+        let mut validator = Validator::new(schema_loader);
 
         let result = validator.validate(&envelope);
 
@@ -65,7 +71,11 @@ mod tests {
 
     #[test]
     fn test_serialization_roundtrip() {
-        let header = Header::new("1.0".to_string(), "test-schema".to_string());
+        let header = Header::new(
+            "1.0".to_string(),
+            "test".to_string(),
+            "test-schema".to_string(),
+        );
         let data = json!({
             "id": "123",
             "name": "Test Item"
@@ -84,7 +94,11 @@ mod tests {
             envelope.header.schema_version,
             deserialized.header.schema_version
         );
-        assert_eq!(envelope.header.schema_id, deserialized.header.schema_id);
+        assert_eq!(
+            envelope.header.schema_category,
+            deserialized.header.schema_category
+        );
+        assert_eq!(envelope.header.schema_name, deserialized.header.schema_name);
         assert_eq!(envelope.data, deserialized.data);
         assert_eq!(envelope.metadata, deserialized.metadata);
     }
@@ -100,19 +114,21 @@ mod tests {
         let failure_result = ValidationResult::failure(errors.clone());
         assert!(!failure_result.is_valid());
         assert!(failure_result.has_errors());
-        assert_eq!(failure_result.errors(), &errors);
+        assert_eq!(failure_result.get_errors(), &errors);
         assert_eq!(failure_result.error_message(), "Error 1; Error 2");
     }
 
     #[test]
     fn test_schema_loader_basic_operations() {
-        let mut schema_loader = SchemaLoader::new();
+        let mut schema_loader =
+            SchemaLoader::new("schemas".to_string(), "bees".to_string(), "v1".to_string());
 
         // Test basic operations
-        assert_eq!(schema_loader.schema_base_path(), "schemas");
+        assert_eq!(schema_loader.get_schema_root(), "schemas");
 
+        // Note: set_schema_base_path is deprecated, but we'll test it for backward compatibility
         schema_loader.set_schema_base_path("/custom/path".to_string());
-        assert_eq!(schema_loader.schema_base_path(), "/custom/path");
+        assert_eq!(schema_loader.get_schema_root(), "/custom/path");
 
         schema_loader.clear_cache();
         // Should not panic
@@ -121,8 +137,12 @@ mod tests {
 
     #[test]
     fn test_validator_with_custom_schema_loader() {
-        let schema_loader = SchemaLoader::with_base_path("/custom/path".to_string());
-        let _validator = Validator::with_schema_loader(schema_loader);
+        let schema_loader = SchemaLoader::new(
+            "/custom/path".to_string(),
+            "bees".to_string(),
+            "v1".to_string(),
+        );
+        let _validator = Validator::new(schema_loader);
 
         // Should not panic
         assert!(true);
@@ -130,8 +150,8 @@ mod tests {
 
     #[test]
     fn test_header_timestamp_consistency() {
-        let header1 = Header::new("1.0".to_string(), "test".to_string());
-        let header2 = Header::new("1.0".to_string(), "test".to_string());
+        let header1 = Header::new("1.0".to_string(), "test".to_string(), "test".to_string());
+        let header2 = Header::new("1.0".to_string(), "test".to_string(), "test".to_string());
 
         // Both should have recent timestamps
         let now = chrono::Utc::now();
@@ -144,7 +164,7 @@ mod tests {
 
     #[test]
     fn test_envelope_with_different_data_types() {
-        let header = Header::new("1.0".to_string(), "test".to_string());
+        let header = Header::new("1.0".to_string(), "test".to_string(), "test".to_string());
 
         // Test with different data types
         let _envelope1 = Envelope::new(header.clone(), json!("string data"));
@@ -175,7 +195,7 @@ mod tests {
 
     #[test]
     fn test_clone_operations() {
-        let header = Header::new("1.0".to_string(), "test".to_string());
+        let header = Header::new("1.0".to_string(), "test".to_string(), "test".to_string());
         let data = json!({"id": "123"});
         let envelope = Envelope::new(header, data);
 
@@ -184,7 +204,14 @@ mod tests {
             envelope.header.schema_version,
             cloned_envelope.header.schema_version
         );
-        assert_eq!(envelope.header.schema_id, cloned_envelope.header.schema_id);
+        assert_eq!(
+            envelope.header.schema_category,
+            cloned_envelope.header.schema_category
+        );
+        assert_eq!(
+            envelope.header.schema_name,
+            cloned_envelope.header.schema_name
+        );
         assert_eq!(envelope.data, cloned_envelope.data);
 
         let validation_result = ValidationResult::success();

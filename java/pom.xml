@@ -37,13 +37,22 @@
     <build>
         <resources>
             <resource>
-                <directory>../schemas</directory>
+                <directory>${project.basedir}/../schemas</directory>
                 <targetPath>schemas</targetPath>
                 <includes>
                     <include>**/*.json</include>
                 </includes>
             </resource>
         </resources>
+        <testResources>
+            <testResource>
+                <directory>${project.basedir}/../schemas</directory>
+                <targetPath>schemas</targetPath>
+                <includes>
+                    <include>**/*.json</include>
+                </includes>
+            </testResource>
+        </testResources>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
