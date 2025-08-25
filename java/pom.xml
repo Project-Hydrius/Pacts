@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>net.hydrius</groupId>
-    <artifactId>Pacts</artifactId>
+    <artifactId>pacts</artifactId>
     <version>0.0.2</version>
     <packaging>jar</packaging>
 
