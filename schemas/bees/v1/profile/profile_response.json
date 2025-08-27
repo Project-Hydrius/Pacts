@@ -17,15 +17,19 @@
         "response_message": {
             "type": "string"
         },
-        "profile": {
-            "type": "object",
+        "profiles": {
+            "type": "array",
             "description": "Profile data",
-            "$ref": "profile.json"
+            "items": {
+                "description": "Array of profiles",
+                "$ref": "profile.json"
+            }
         }
     },
     "required": [
         "date",
         "request_type",
+        "response_status",
         "target_id"
     ]
 }
