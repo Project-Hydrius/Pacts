@@ -21,32 +21,9 @@ pub struct PactsService {
 }
 
 impl PactsService {
-    /// Creates a new PactsService with default settings
-    pub fn new() -> Self {
-        let schema_loader =
-            SchemaLoader::new("schemas".to_string(), "bees".to_string(), "v1".to_string());
-        let validator = Validator::new(schema_loader.clone());
-
-        Self {
-            validator: Arc::new(validator),
-            schema_loader: Arc::new(RefCell::new(schema_loader)),
-        }
-    }
-
-    /// Creates a new PactsService with a custom schema base path
-    pub fn with_base_path(base_path: String) -> Self {
-        let schema_loader = SchemaLoader::new(base_path, "bees".to_string(), "v1".to_string());
-        let validator = Validator::new(schema_loader.clone());
-
-        Self {
-            validator: Arc::new(validator),
-            schema_loader: Arc::new(RefCell::new(schema_loader)),
-        }
-    }
-
-    /// Creates a new PactsService with an explicit version directory (e.g. "v1")
-    pub fn with_version(base_path: String, version_directory: String) -> Self {
-        let schema_loader = SchemaLoader::new(base_path, "bees".to_string(), version_directory);
+    /// Creates a new PactsService
+    pub fn new(schema_root: String, domain: String, version: String) -> Self {
+        let schema_loader = SchemaLoader::new(schema_root, domain, version);
         let validator = Validator::new(schema_loader.clone());
 
         Self {
@@ -58,14 +35,13 @@ impl PactsService {
     /// Creates an envelope with authentication
     pub fn create_envelope_with_auth(
         &self,
-        schema_version: String,
         schema_category: String,
         schema_name: String,
         data: Value,
         auth_token: String,
     ) -> Envelope {
         let header = Header::with_auth(
-            schema_version,
+            self.schema_loader.borrow().get_version().to_string(),
             schema_category,
             schema_name,
             Some("application/json".to_string()),
@@ -77,13 +53,12 @@ impl PactsService {
     /// Creates an envelope without authentication
     pub fn create_envelope(
         &self,
-        schema_version: String,
         schema_category: String,
         schema_name: String,
         data: Value,
     ) -> Envelope {
         let header = Header::with_content_type(
-            schema_version,
+            self.schema_loader.borrow().get_version().to_string(),
             schema_category,
             schema_name,
             "application/json".to_string(),
@@ -111,7 +86,7 @@ impl PactsService {
             .load_schema(category, schema_name)
         {
             schema => {
-                let mut validator = (*self.validator).clone();
+                let validator = (*self.validator).clone();
                 validator.validate_data(data, &schema)
             }
         }
@@ -120,7 +95,6 @@ impl PactsService {
     /// Sends validated data using a provided sender function
     pub fn send_validated_data<T, F>(
         &self,
-        schema_version: String,
         schema_category: String,
         schema_name: String,
         data: Value,
@@ -130,13 +104,8 @@ impl PactsService {
     where
         F: FnOnce(&Envelope) -> Result<T, String>,
     {
-        let envelope = self.create_envelope_with_auth(
-            schema_version,
-            schema_category,
-            schema_name,
-            data,
-            auth_token,
-        );
+        let envelope =
+            self.create_envelope_with_auth(schema_category, schema_name, data, auth_token);
         let result = self.validate(&envelope);
 
         if result.is_valid() {
@@ -159,6 +128,6 @@ impl PactsService {
 
 impl Default for PactsService {
     fn default() -> Self {
-        Self::new()
+        Self::new("schemas".to_string(), "bees".to_string(), "v1".to_string())
     }
 }

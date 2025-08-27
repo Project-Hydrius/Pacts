@@ -126,24 +126,7 @@ mod tests {
         // Test basic operations
         assert_eq!(schema_loader.get_schema_root(), "schemas");
 
-        // Note: set_schema_base_path is deprecated, but we'll test it for backward compatibility
-        schema_loader.set_schema_base_path("/custom/path".to_string());
-        assert_eq!(schema_loader.get_schema_root(), "/custom/path");
-
         schema_loader.clear_cache();
-        // Should not panic
-        assert!(true);
-    }
-
-    #[test]
-    fn test_validator_with_custom_schema_loader() {
-        let schema_loader = SchemaLoader::new(
-            "/custom/path".to_string(),
-            "bees".to_string(),
-            "v1".to_string(),
-        );
-        let _validator = Validator::new(schema_loader);
-
         // Should not panic
         assert!(true);
     }

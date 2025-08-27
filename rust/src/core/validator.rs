@@ -11,7 +11,6 @@
 
 use crate::{Envelope, SchemaLoader};
 use serde_json::Value;
-use std::collections::HashMap;
 
 /// Validation result containing validation status and errors
 #[derive(Debug, Clone)]
@@ -64,12 +63,6 @@ impl ValidationResult {
         } else {
             self.errors.join("; ")
         }
-    }
-
-    // Legacy methods for backward compatibility
-    #[deprecated(since = "1.0.0", note = "Use get_errors() instead")]
-    pub fn errors(&self) -> &[String] {
-        &self.errors
     }
 }
 
@@ -231,11 +224,5 @@ impl Validator {
                 }
             }
         }
-    }
-
-    // Legacy methods for backward compatibility
-    #[deprecated(since = "1.0.0", note = "Use new() constructor instead")]
-    pub fn with_schema_loader(schema_loader: SchemaLoader) -> Self {
-        Self::new(schema_loader)
     }
 }

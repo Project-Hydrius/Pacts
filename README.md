@@ -78,7 +78,7 @@ if (result.isValid()) {
 
 #### Directory-Based Schema Loading
 
-You can also load schemas by directory structure, where the version is automatically extracted from `v{number}` directories.
+You can also load schemas by directory structure, where the version is automatically extracted from the specified directory.
 
 ```java
 import net.hydrius.pacts.core.SchemaLoader;
@@ -186,7 +186,7 @@ public class GameService {
         data.put("date", Instant.now().toString());
         
         // Create and validate envelope
-        Envelope envelope = pactsService.createEnvelope("v1", "player", "player_request", data, authToken);
+        Envelope envelope = pactsService.createEnvelope("player", "player_request", data, authToken);
         
         ValidationResult result = pactsService.validate(envelope);
         if (result.isValid()) {
@@ -195,9 +195,6 @@ public class GameService {
             
             MessageProperties props = new MessageProperties();
             props.setContentType("application/json");
-            props.setHeader("schema-id", envelope.getHeader().getSchemaId());
-            props.setHeader("schema-version", envelope.getHeader().getSchemaVersion());
-            props.setHeader("auth-token", envelope.getHeader().getAuthToken());
             
             Message message = MessageBuilder
                 .withBody(json.getBytes())
@@ -239,7 +236,7 @@ Configuration properties:
 ```properties
 # application.properties
 pacts.schema.root=schemas
-pacts.schema.domain=bees
+pacts.schema.domain=example
 pacts.schema.version=v1
 ```
 
@@ -293,7 +290,7 @@ if result.is_valid() {
 
 #### Directory-Based Schema Loading
 
-You can also load schemas by directory structure, where the version is automatically extracted from `v{number}` directories.
+You can also load schemas by directory structure, where the version is automatically extracted from specified directories.
 
 ```rust
 use pacts::schema_loader::SchemaLoader;
@@ -324,7 +321,7 @@ use pacts::{PactsService, ValidationResult};
 use serde_json::json;
 
 // Create service with explicit version directory
-let service = PactsService::with_version("schemas".to_string(), "bees".to_string(), "v1".to_string());
+let service = PactsService::new("schemas".to_string(), "bees".to_string(), "v1".to_string());
 
 // Create and validate envelope with authentication
 let data = json!({
@@ -334,7 +331,6 @@ let data = json!({
 });
 
 let envelope = service.create_envelope_with_auth(
-    "v1".to_string(),
     "player".to_string(),
     "player_request".to_string(),
     data,
@@ -476,14 +472,14 @@ Schemas are organized in a hierarchical directory structure:
 ```text
 schemas/
 ├── {domain}/              # Domain (e.g., bees, moderation, network)
-│   └── v{number}/         # Version directory (e.g., v1, v2)
+│   └── {version}/         # Version directory (e.g., v1, v2)
 │       ├── {category}/    # Category (e.g., inventory, player, profile)
 │       │   ├── {schema_name}.json
 │       │   └── {schema_name}.json
 │       └── {category}/
 │           └── {schema_name}.json
 └── {domain}/
-    └── v{number}/
+    └── {version}/
         └── {category}/
             └── {schema_name}.json
 ```
@@ -491,7 +487,7 @@ schemas/
 This structure allows for:
 
 - **Domain separation**: Different domains (bees, moderation, etc.)
-- **Version management**: Automatic version detection from `v{number}` directories
+- **Version management**: Automatic version detection from `{version}` directories
 - **Category organization**: Logical grouping within domains
 - **Schema naming**: Clear, descriptive schema names
 
