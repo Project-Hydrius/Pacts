@@ -1,37 +1,6 @@
 # Pacts - Schema Validation
 
-A comprehensive schema validation system for JSON payload communication between Game Servers and Microservices, implemented in both Java and Rust. Designed for seamless integration with Spring Boot/RabbitMQ (Java) and Actix/RabbitMQ (Rust).
-
-## Project Structure
-
-```
-pacts/
-├── java/                   # Java implementation
-│   ├── pom.xml             # Maven configuration
-│   └── src/main/java/net/hydrius/pacts/
-│       ├── model/
-│       │       ├── Envelope.java   # Wraps data with metadata
-│       │       └── Header.java     # Contains envelope metadata
-│       ├── core/
-│       │       ├── Validator.java  # Validates data against schemas
-│       │       ├── ValidationResult.java # Holds validation results
-│       │       └── SchemaLoader.java # Loads schemas from various sources
-│       ├── impl/
-│       │       └── PactsService.java # Service class for convenient Pacts operations
-├── rust/                  # Rust implementation
-│   ├── Cargo.toml         # Cargo configuration
-│   └── src/
-│       ├── lib.rs         # Main library file
-│       ├── model/
-│       │       ├── envelope.rs    # Envelope model
-│       │       └── header.rs      # Header model
-│       ├── core/
-│       │       ├── schema_loader.rs # Schema loader struct
-│       │       └── validator.rs   # Validator struct
-│       ├── impl/ # Implementation
-│       │       └── service.rs # Service struct for convenient Pacts operations
-└── schemas/               # Schema files organized by domain and version
-```
+A simple schema validation system for JSON payload communication between Game Servers and Microservices, implemented in both Java and Rust. Designed for fast integration with Spring Boot/RabbitMQ (Java) and Actix/RabbitMQ (Rust).
 
 ## Java Implementation
 
@@ -52,8 +21,8 @@ The Rust crate embeds the same `schemas/` directory into the compiled library, a
 ```java
 import net.hydrius.pacts.*;
 
-// Create a header with authentication
-Header header = new Header("v1", "player", "player_request", "application/json", "your-auth-token");
+// Create a header
+Header header = new Header("v1", "player", "player_request", "application/json");
 
 // Create data
 Map<String, Object> playerRequestData = new HashMap<>();
@@ -78,21 +47,20 @@ if (result.isValid()) {
 
 #### Directory-Based Schema Loading
 
-You can also load schemas by directory structure, where the version is automatically extracted from the specified directory.
+You can load schemas by directory structure, where the version is automatically extracted from the specified directory.
 
 ```java
 import net.hydrius.pacts.core.SchemaLoader;
 import com.fasterxml.jackson.databind.JsonNode;
 
-// Create a schema loader and explicitly set version directory
+// Create a schema loader and explicitly set version directory.
 SchemaLoader schemaLoader = new SchemaLoader("schemas", "bees", "v1");
 
 // Load a schema by category and name, schema loader will automatically load from the correct version directory and domain.
 JsonNode inventorySchema = schemaLoader.loadSchema("inventory", "inventory_item");
 JsonNode playerSchema = schemaLoader.loadSchema("player", "player_request");
 
-// Schemas are cached for performance
-JsonNode cachedSchema = schemaLoader.loadSchema("inventory", "inventory_item");
+// Schemas are also cached for performance.
 ```
 
 **Directory Structure Support:**
@@ -114,13 +82,14 @@ import net.hydrius.pacts.model.Envelope;
 SchemaLoader schemaLoader = new SchemaLoader("schemas", "bees", "v1");
 PactsService pactsService = new PactsService(schemaLoader);
 
-// Create and validate envelope with authentication
-Envelope envelope = pactsService.createEnvelope("player", "player_request", playerData, "auth-token");
+// Create and validate envelope
+Envelope envelope = pactsService.createEnvelope("player", "player_request", playerData);
 
 ValidationResult result = pactsService.validate(envelope);
 if (result.isValid()) {
     String json = pactsService.toJson(envelope);
     // Send json to RabbitMQ or other messaging system
+    // You should set tokens through your payload distributor
 }
 
 // Validate data against a specific schema
@@ -186,7 +155,7 @@ public class GameService {
         data.put("date", Instant.now().toString());
         
         // Create and validate envelope
-        Envelope envelope = pactsService.createEnvelope("player", "player_request", data, authToken);
+        Envelope envelope = pactsService.createEnvelope("player", "player_request", data);
         
         ValidationResult result = pactsService.validate(envelope);
         if (result.isValid()) {
@@ -195,6 +164,7 @@ public class GameService {
             
             MessageProperties props = new MessageProperties();
             props.setContentType("application/json");
+            props.setHeader("Authorization", "Bearer " + authToken);
             
             Message message = MessageBuilder
                 .withBody(json.getBytes())
@@ -209,35 +179,24 @@ public class GameService {
     
     @RabbitListener(queues = "player.responses")
     public void handlePlayerResponse(Message message) throws Exception {
-        String json = new String(message.getBody());
+        String json = new String(message.getBody(), StandardCharsets.UTF_8);
         Envelope envelope = pactsService.parseEnvelope(json);
-        
-        // Validate the received message
+
+        // Validate the message
         ValidationResult result = pactsService.validate(envelope);
-        if (result.isValid()) {
-            // Check authentication if needed
-            String authToken = envelope.getHeader().getAuthToken();
-            if (authToken != null && !isValidToken(authToken)) {
-                log.error("Invalid auth token in response");
-                return;
-            }
-            
-            // Process the valid response
-            processPlayerResponse(envelope);
-        } else {
+        if (!result.isValid()) {
             log.error("Received invalid response: {}", result.getErrorMessage());
+            return;
         }
+
+        // Extract token from headers
+        MessageProperties props = message.getMessageProperties();
+        String authHeader = props.getHeader("Authorization");
+
+        // Logic here...
     }
+
 }
-```
-
-Configuration properties:
-
-```properties
-# application.properties
-pacts.schema.root=schemas
-pacts.schema.domain=example
-pacts.schema.version=v1
 ```
 
 ## Rust Implementation
@@ -257,13 +216,11 @@ cargo build
 use pacts::{Envelope, Header, Validator, ValidationResult};
 use serde_json::json;
 
-// Create a header with authentication
-let header = Header::with_auth(
+// Create a header
+let header = Header::new(
     "v1".to_string(), 
     "player".to_string(),
     "player_request".to_string(),
-    Some("application/json".to_string()),
-    "your-auth-token".to_string()
 );
 
 // Create data
@@ -290,12 +247,12 @@ if result.is_valid() {
 
 #### Directory-Based Schema Loading
 
-You can also load schemas by directory structure, where the version is automatically extracted from specified directories.
+You can load schemas by directory structure, where the version is automatically extracted from specified directories.
 
 ```rust
 use pacts::schema_loader::SchemaLoader;
 
-// Create a schema loader with explicit version (recommended)
+// Create a schema loader
 let mut schema_loader = SchemaLoader::new("schemas".to_string(), "bees".to_string(), "v1".to_string());
 
 // Load schemas by domain/category/name
@@ -323,18 +280,17 @@ use serde_json::json;
 // Create service with explicit version directory
 let service = PactsService::new("schemas".to_string(), "bees".to_string(), "v1".to_string());
 
-// Create and validate envelope with authentication
+// Create and validate envelope
 let data = json!({
     "target_id": "player-123",
     "request_type": "PLAYER_JOIN",
     "date": chrono::Utc::now().to_string()
 });
 
-let envelope = service.create_envelope_with_auth(
+let envelope = service.create_envelope(
     "player".to_string(),
     "player_request".to_string(),
     data,
-    "auth-token".to_string()
 );
 
 let result = service.validate(&envelope);
@@ -396,12 +352,10 @@ async fn handle_player_request(
     }
     
     // Create envelope with authentication
-    let header = Header::with_auth(
+    let header = Header::new(
         "v1".to_string(),
         "player".to_string(),
         "player_request".to_string(),
-        Some("application/json".to_string()),
-        auth_header.to_string(),
     );
     
     let envelope = Envelope::new(header, serde_json::to_value(&data.into_inner()).unwrap());
@@ -493,7 +447,6 @@ This structure allows for:
 
 ## Features
 
-- **Authentication Support**: Built-in auth token handling in Headers
 - **Envelope Pattern**: Wraps data with metadata for validation and routing
 - **Header**: Contains schema version, ID, timestamp, content type, and auth token
 - **Validator**: Validates envelopes and data against schemas
