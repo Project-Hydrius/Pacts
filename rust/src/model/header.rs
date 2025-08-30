@@ -29,9 +29,6 @@ pub struct Header {
 
     #[serde(rename = "content_type")]
     pub content_type: Option<String>,
-
-    #[serde(rename = "auth_token")]
-    pub auth_token: Option<String>,
 }
 
 impl Header {
@@ -43,7 +40,6 @@ impl Header {
             schema_name,
             timestamp: Utc::now(),
             content_type: None,
-            auth_token: None,
         }
     }
 
@@ -60,25 +56,6 @@ impl Header {
             schema_name,
             timestamp: Utc::now(),
             content_type: Some(content_type),
-            auth_token: None,
-        }
-    }
-
-    /// Creates a new header with schema version, category, name, content type, and auth token
-    pub fn with_auth(
-        schema_version: String,
-        schema_category: String,
-        schema_name: String,
-        content_type: Option<String>,
-        auth_token: String,
-    ) -> Self {
-        Self {
-            schema_version,
-            schema_category,
-            schema_name,
-            timestamp: Utc::now(),
-            content_type,
-            auth_token: Some(auth_token),
         }
     }
 
@@ -105,10 +82,5 @@ impl Header {
     /// Gets the content type
     pub fn content_type(&self) -> Option<&str> {
         self.content_type.as_deref()
-    }
-
-    /// Gets the auth token
-    pub fn auth_token(&self) -> Option<&str> {
-        self.auth_token.as_deref()
     }
 }
