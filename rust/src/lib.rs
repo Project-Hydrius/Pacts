@@ -28,12 +28,12 @@ mod tests {
     fn test_library_exports() {
         // Test that all public items are accessible
         let _envelope: Envelope = Envelope::new(
-            Header::new("1.0".to_string(), "test".to_string(), "test".to_string()),
+            Header::new("v1".to_string(), "test".to_string(), "test".to_string()),
             json!({}),
         );
 
         let _header: Header =
-            Header::new("1.0".to_string(), "test".to_string(), "test".to_string());
+            Header::new("v1".to_string(), "test".to_string(), "test".to_string());
         let _schema_loader: SchemaLoader =
             SchemaLoader::new("schemas".to_string(), "bees".to_string(), "v1".to_string());
         let _validator: Validator = Validator::new(_schema_loader.clone());
@@ -47,7 +47,7 @@ mod tests {
     fn test_basic_workflow() {
         // Test a complete workflow from envelope creation to validation
         let header = Header::new(
-            "1.0".to_string(),
+            "v1".to_string(),
             "inventory".to_string(),
             "inventory_item".to_string(),
         );

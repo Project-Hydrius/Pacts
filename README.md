@@ -47,7 +47,7 @@ if (result.isValid()) {
 
 #### Directory-Based Schema Loading
 
-You can load schemas by directory structure, where the version is automatically extracted from the specified directory.
+You can load schemas by directory structure; pass the version directory explicitly via the constructor.
 
 ```java
 import net.hydrius.pacts.core.SchemaLoader;
@@ -191,7 +191,7 @@ public class GameService {
 
         // Extract token from headers
         MessageProperties props = message.getMessageProperties();
-        String authHeader = props.getHeader("Authorization");
+        String authHeader = (String) props.getHeaders().get("Authorization");
 
         // Logic here...
     }
@@ -247,7 +247,7 @@ if result.is_valid() {
 
 #### Directory-Based Schema Loading
 
-You can load schemas by directory structure, where the version is automatically extracted from specified directories.
+You can load schemas by directory structure; pass the version directory explicitly via the constructor.
 
 ```rust
 use pacts::schema_loader::SchemaLoader;
