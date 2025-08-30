@@ -34,9 +34,6 @@ public class Header {
     @JsonProperty("content_type")
     private String contentType;
 
-    @JsonProperty("auth_token")
-    private String authToken;
-
     public Header() {
     }
 
@@ -68,25 +65,6 @@ public class Header {
         this.schemaCategory = schemaCategory;
         this.schemaName = schemaName;
         this.contentType = contentType;
-        this.timestamp = Instant.now();
-    }
-
-    /**
-     * Creates a new header with the given schema version, category, name,
-     * content type, and auth token
-     *
-     * @param schemaVersion the version of the schema
-     * @param schemaCategory the category of the schema
-     * @param schemaName the name of the schema
-     * @param contentType the content type of the schema
-     * @param authToken the authentication token
-     */
-    public Header(String schemaVersion, String schemaCategory, String schemaName, String contentType, String authToken) {
-        this.schemaVersion = schemaVersion;
-        this.schemaCategory = schemaCategory;
-        this.schemaName = schemaName;
-        this.contentType = contentType;
-        this.authToken = authToken;
         this.timestamp = Instant.now();
     }
 
@@ -180,21 +158,4 @@ public class Header {
         this.contentType = contentType;
     }
 
-    /**
-     * Gets the auth token
-     *
-     * @return the auth token
-     */
-    public String getAuthToken() {
-        return authToken;
-    }
-
-    /**
-     * Sets the auth token
-     *
-     * @param authToken the auth token
-     */
-    public void setAuthToken(String authToken) {
-        this.authToken = authToken;
-    }
 }
