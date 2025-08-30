@@ -40,20 +40,6 @@ public class PactsService {
     }
 
     /**
-     * Creates an envelope with authentication
-     *
-     * @param category the category of the schema
-     * @param name the name of the schema
-     * @param data the data to send
-     * @param authToken the authentication token
-     * @return the envelope
-     */
-    public Envelope createEnvelope(String category, String name, Object data, String authToken) {
-        Header header = new Header(schemaLoader.getVersion(), category, name, "application/json", authToken);
-        return new Envelope(header, data);
-    }
-
-    /**
      * Creates an envelope without authentication
      *
      * @param category the category of the schema
@@ -109,7 +95,6 @@ public class PactsService {
      * @param category the category of the schema
      * @param name the name of the schema
      * @param data the data to send
-     * @param authToken the authentication token
      * @param sender the sender function
      * @return the result of the sender function
      * @throws Exception if the validation fails
@@ -118,10 +103,9 @@ public class PactsService {
             String category,
             String name,
             Object data,
-            String authToken,
             MessageSender<T> sender
     ) throws Exception {
-        Envelope envelope = createEnvelope(category, name, data, authToken);
+        Envelope envelope = createEnvelope(category, name, data);
         ValidationResult result = validate(envelope);
 
         if (!result.isValid()) {
@@ -164,7 +148,6 @@ public class PactsService {
      */
     @FunctionalInterface
     public interface MessageSender<T> {
-
         T send(Envelope envelope) throws Exception;
     }
 
@@ -172,7 +155,6 @@ public class PactsService {
      * Custom exception for validation errors
      */
     public static class ValidationException extends Exception {
-
         public ValidationException(String message) {
             super(message);
         }

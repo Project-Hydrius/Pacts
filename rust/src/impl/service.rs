@@ -32,25 +32,7 @@ impl PactsService {
         }
     }
 
-    /// Creates an envelope with authentication
-    pub fn create_envelope_with_auth(
-        &self,
-        schema_category: String,
-        schema_name: String,
-        data: Value,
-        auth_token: String,
-    ) -> Envelope {
-        let header = Header::with_auth(
-            self.schema_loader.borrow().get_version().to_string(),
-            schema_category,
-            schema_name,
-            Some("application/json".to_string()),
-            auth_token,
-        );
-        Envelope::new(header, data)
-    }
-
-    /// Creates an envelope without authentication
+    /// Creates an envelope
     pub fn create_envelope(
         &self,
         schema_category: String,
@@ -98,14 +80,13 @@ impl PactsService {
         schema_category: String,
         schema_name: String,
         data: Value,
-        auth_token: String,
         sender: F,
     ) -> Result<T, String>
     where
         F: FnOnce(&Envelope) -> Result<T, String>,
     {
         let envelope =
-            self.create_envelope_with_auth(schema_category, schema_name, data, auth_token);
+            self.create_envelope(schema_category, schema_name, data);
         let result = self.validate(&envelope);
 
         if result.is_valid() {
