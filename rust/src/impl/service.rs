@@ -1,14 +1,3 @@
-/*
- * Copyright © 2025 Hydrius, Project Hydrius, Wyrmlings
- * https://github.com/Project-Hydrius
- *
- * All rights reserved.
- *
- * This source code is part of the organizations named above.
- * Licensed for private use only. Unauthorized copying, modification,
- * or distribution is strictly prohibited.
- */
-
 use crate::{Envelope, Header, SchemaLoader, ValidationResult, Validator};
 use serde_json::Value;
 use std::cell::RefCell;

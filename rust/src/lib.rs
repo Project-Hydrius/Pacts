@@ -1,14 +1,3 @@
-/*
- * Copyright © 2025 Hydrius, Project Hydrius, Wyrmlings
- * https://github.com/Project-Hydrius
- *
- * All rights reserved.
- *
- * This source code is part of the organizations named above.
- * Licensed for private use only. Unauthorized copying, modification,
- * or distribution is strictly prohibited.
- */
-
 pub mod core;
 pub mod r#impl;
 pub mod model;
