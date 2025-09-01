@@ -10,6 +10,7 @@ import java.util.Map;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
 /**
  * SchemaLoader class that loads schemas that are bundled with Pacts.
@@ -38,6 +39,7 @@ public class SchemaLoader {
         }
 
         this.objectMapper = new ObjectMapper();
+        this.objectMapper.registerModule(new JavaTimeModule());
         this.cache = new HashMap<>();
         this.schemaRoot = schemaRoot;
         this.domain = domain;
