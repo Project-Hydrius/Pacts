@@ -1,0 +1,8 @@
+logging:
+  level:
+    root: INFO
+    net.hydrius: DEBUG
+    org.springframework.amqp.rabbit.core.RabbitTemplate: DEBUG
+    org.springframework.amqp.rabbit.listener.SimpleMessageListenerContainer: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
