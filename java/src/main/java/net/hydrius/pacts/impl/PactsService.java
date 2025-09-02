@@ -6,6 +6,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import net.hydrius.pacts.core.SchemaLoader;
 import net.hydrius.pacts.core.ValidationResult;
 import net.hydrius.pacts.core.Validator;
@@ -27,6 +28,7 @@ public class PactsService {
         this.schemaLoader = schemaLoader;
         this.validator = new Validator(schemaLoader);
         this.objectMapper = new ObjectMapper();
+        this.objectMapper.registerModule(new JavaTimeModule());
     }
 
     /**

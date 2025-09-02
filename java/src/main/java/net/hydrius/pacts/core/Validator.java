@@ -7,6 +7,7 @@ import java.util.List;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import net.hydrius.pacts.model.Envelope;
 import net.hydrius.pacts.model.Header;
 
@@ -25,6 +26,7 @@ public class Validator {
      */
     public Validator(SchemaLoader schemaLoader) {
         this.objectMapper = new ObjectMapper();
+        this.objectMapper.registerModule(new JavaTimeModule());
         this.schemaLoader = schemaLoader;
     }
 
