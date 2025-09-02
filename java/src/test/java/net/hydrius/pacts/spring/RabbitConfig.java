@@ -5,8 +5,6 @@ import org.springframework.amqp.rabbit.connection.CachingConnectionFactory;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitAdmin;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
-import org.springframework.amqp.rabbit.listener.SimpleMessageListenerContainer;
-import org.springframework.amqp.rabbit.listener.adapter.MessageListenerAdapter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.testcontainers.containers.RabbitMQContainer;
@@ -16,7 +14,7 @@ import static net.hydrius.pacts.spring.SpringBootMessageTest.*;
 @Configuration
 public class RabbitConfig {
 
-    @Bean
+    @Bean(initMethod = "start", destroyMethod = "stop")
     public RabbitMQContainer rabbitMQContainer() {
         RabbitMQContainer container = new RabbitMQContainer("rabbitmq:3.13.1");
         container.start();
@@ -59,20 +57,6 @@ public class RabbitConfig {
     @Bean
     Binding binding(Queue q, TopicExchange ex) {
         return BindingBuilder.bind(q).to(ex).with(ROUTING_KEY);
-    }
-
-    @Bean
-    public SimpleMessageListenerContainer messageListenerContainer(ConnectionFactory cf, MessageListenerAdapter listenerAdapter) {
-        SimpleMessageListenerContainer container = new SimpleMessageListenerContainer();
-        container.setConnectionFactory(cf);
-        container.setQueueNames(QUEUE);
-        container.setMessageListener(listenerAdapter);
-        return container;
-    }
-
-    @Bean
-    public MessageListenerAdapter listenerAdapter(TestListener receiver) {
-        return new MessageListenerAdapter(receiver, "handleMessage");
     }
 
 }
