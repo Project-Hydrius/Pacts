@@ -5,7 +5,7 @@
 
     <groupId>net.hydrius</groupId>
     <artifactId>pacts</artifactId>
-    <version>0.0.4</version>
+    <version>1.0.0</version>
     <packaging>jar</packaging>
 
     <name>Pacts</name>
@@ -22,6 +22,7 @@
                 <targetPath>schemas</targetPath>
                 <includes>
                     <include>**/*.json</include>
+                    <include>VERSION</include>
                 </includes>
             </resource>
         </resources>
@@ -31,6 +32,7 @@
                 <targetPath>schemas</targetPath>
                 <includes>
                     <include>**/*.json</include>
+                    <include>VERSION</include>
                 </includes>
             </testResource>
         </testResources>
