@@ -1,25 +1,49 @@
 {
+	"$schema": "http://json-schema.org/draft-07/schema#",
+	"$id": "player_response.json",
 	"type": "object",
+	"title": "PlayerResponse",
+	"description": "A response object containing player data and associated metadata",
+	"deprecated": false,
 	"properties": {
 		"date": {
 			"type": "string",
-			"format": "date-time"
+			"format": "date-time",
+			"description": "The date and time of the response, in ISO 8601 format",
+			"readOnly": true,
+			"example": "2025-09-05T15:30:00Z"
 		},
 		"request_type": {
-			"type": "string"
+			"type": "string",
+			"description": "The type of request that was made",
+			"readOnly": true,
+			"example": "PLAYER_GET"
 		},
 		"response_status": {
-			"type": "string"
+			"type": "string",
+			"description": "The status of the response",
+			"readOnly": true,
+			"example": "OK"
 		},
 		"target_id": {
-			"type": "string"
+			"type": "string",
+			"format": "uuid",
+			"description": "The UUID of the target player",
+			"readOnly": true,
+			"example": "123e4567-e89b-12d3-a456-426614174000"
 		},
 		"response_message": {
-			"type": "string"
+			"type": "string",
+			"description": "Optional message providing context about the response",
+			"nullable": true,
+			"readOnly": true,
+			"example": "Player data retrieved successfully"
 		},
 		"inventory": {
 			"type": "array",
 			"description": "Array of inventory items",
+			"nullable": true,
+			"readOnly": true,
 			"items": {
 				"$ref": "../inventory/inventory_item.json"
 			}
@@ -27,6 +51,8 @@
 		"invitations": {
 			"type": "array",
 			"description": "Array of invitations",
+			"nullable": true,
+			"readOnly": true,
 			"items": {
 				"$ref": "../profile/profile_invitation.json"
 			}
@@ -37,5 +63,6 @@
 		"request_type",
 		"response_status",
 		"target_id"
-	]
+	],
+	"additionalProperties": true
 }

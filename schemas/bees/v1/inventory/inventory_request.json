@@ -1,37 +1,56 @@
 {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "inventory_request.json",
     "type": "object",
+    "title": "InventoryRequest",
+    "description": "A request object containing inventory data and associated metadata.",
+    "deprecated": false,
     "properties": {
         "date": {
             "type": "string",
-            "format": "date-time"
+            "format": "date-time",
+            "description": "The timestamp of the request (ISO 8601 format).",
+            "example": "2025-09-05T15:30:00Z"
         },
         "request_type": {
-            "type": "string"
+            "type": "string",
+            "description": "The type of request being made (e.g. INVENTORY_GET, INVENTORY_UPDATE).",
+            "example": "INVENTORY_GET"
         },
         "target_id": {
-            "type": "string"
+            "type": "string",
+            "format": "uuid",
+            "description": "The UUID of the target player, usually the requester.",
+            "example": "123e4567-e89b-12d3-a456-426614174000"
         },
         "profile_id": {
-            "type": "string"
+            "type": "string",
+            "format": "uuid",
+            "description": "The UUID of the profile to which the inventory belongs, usually the requester.",
+            "example": "987e6543-e21b-34c3-b456-426614174999"
         },
         "inventory": {
             "type": "array",
-            "description": "Array of inventory items",
+            "description": "An array of inventory items, typically the entire inventory.",
+            "nullable": true,
             "items": {
-                "description": "Array of inventory items",
                 "$ref": "inventory_item.json"
             }
         },
         "items": {
             "type": "array",
-            "description": "Array of inventory items",
+            "description": "An array of inventory items, typically the items to be added or removed.",
+            "nullable": true,
             "items": {
-                "description": "Array of inventory items",
                 "$ref": "inventory_item.json"
             }
         },
         "slot": {
-            "type": "number"
+            "type": "number",
+            "description": "Slot number associated with the inventory or action.",
+            "nullable": true,
+            "minimum": 0,
+            "example": 3
         }
     },
     "required": [
@@ -55,8 +74,7 @@
             "required": [
                 "slot"
             ]
-        },
-        {}
+        }
     ],
     "not": {
         "allOf": [
@@ -71,5 +89,6 @@
                 ]
             }
         ]
-    }
+    },
+    "additionalProperties": true
 }

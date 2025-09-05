@@ -1,9 +1,9 @@
 {
     "$schema": "http://json-schema.org/draft-07/schema#",
-    "$id": "profile_request.json",
+    "$id": "invitation_request.json",
     "type": "object",
-    "title": "ProfileRequest",
-    "description": "A request object for profile operations",
+    "title": "InvitationRequest",
+    "description": "A request object for invitation operations",
     "deprecated": false,
     "properties": {
         "date": {
@@ -14,14 +14,21 @@
         },
         "request_type": {
             "type": "string",
-            "description": "The type of profile request being made",
-            "example": "PROFILE_GET"
+            "description": "The type of invitation request being made",
+            "example": "INVITATION_GET"
         },
         "target_id": {
             "type": "string",
             "format": "uuid",
-            "description": "The UUID of the target profile or player",
+            "description": "The UUID of the requester",
             "example": "123e4567-e89b-12d3-a456-426614174000"
+        },
+        "recipient_id": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Optional UUID of the recipient of a request",
+            "example": "987e6543-e21b-34c3-b456-426614174999"
         }
     },
     "required": [

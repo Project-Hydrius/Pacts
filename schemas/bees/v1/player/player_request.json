@@ -1,20 +1,33 @@
 {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "player_request.json",
     "type": "object",
+    "title": "PlayerRequest",
+    "description": "A request object for player operations",
+    "deprecated": false,
     "properties": {
         "date": {
             "type": "string",
-            "format": "date-time"
+            "format": "date-time",
+            "description": "The timestamp of the request (ISO 8601 format)",
+            "example": "2025-09-05T15:30:00Z"
         },
         "request_type": {
-            "type": "string"
+            "type": "string",
+            "description": "The type of player request being made",
+            "example": "PLAYER_GET"
         },
         "target_id": {
-            "type": "string"
+            "type": "string",
+            "format": "uuid",
+            "description": "The UUID of the target player",
+            "example": "123e4567-e89b-12d3-a456-426614174000"
         }
     },
     "required": [
         "date",
         "request_type",
         "target_id"
-    ]
+    ],
+    "additionalProperties": true
 }

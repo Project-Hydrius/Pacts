@@ -1,0 +1,70 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "invitation.json",
+    "type": "object",
+    "title": "Invitation",
+    "description": "An invitation to something, usually to join a profile or party.",
+    "deprecated": false,
+    "properties": {
+        "sender_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The UUID of the sender of the invitation",
+            "example": "123e4567-e89b-12d3-a456-426614174000"
+        },
+        "receiver_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The UUID of the recipient of the invitation",
+            "example": "987e6543-e21b-34c3-b456-426614174999"
+        },
+        "status": {
+            "type": "string",
+            "description": "The status of the invitation",
+            "enum": [
+                "PENDING",
+                "ACCEPTED",
+                "DECLINED",
+                "EXPIRED"
+            ],
+            "example": "PENDING"
+        },
+        "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "The timestamp of the invitation creation",
+            "example": "2025-09-05T15:30:00Z"
+        },
+        "profile_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The UUID of the profile associated with the invitation",
+            "example": "987e6543-e21b-34c3-b456-426614174999"
+        },
+        "party_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The UUID of the party associated with the invitation",
+            "example": "987e6543-e21b-34c3-b456-426614174999"
+        }
+    },
+    "required": [
+        "sender_id",
+        "receiver_id",
+        "status",
+        "created_at"
+    ],
+    "anyOf": [
+        {
+            "required": [
+                "profile_id"
+            ]
+        },
+        {
+            "required": [
+                "party_id"
+            ]
+        }
+    ],
+    "additionalProperties": true
+}
