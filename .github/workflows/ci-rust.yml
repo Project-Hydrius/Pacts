@@ -1,0 +1,73 @@
+name: Build & Publish Rust Crate
+
+on:
+  push:
+    paths:
+      - "schemas/**"
+      - "rust/**"
+      - ".github/workflows/**"
+  workflow_dispatch:
+
+jobs:
+  build-rust:
+    name: Build and Publish Rust Crate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    defaults:
+      run:
+        working-directory: rust
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      - name: Cache Cargo
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Read Schema Version
+        id: schema
+        run: |
+          SCHEMA_VERSION=$(cat ../schemas/VERSION | tr -d '\n')
+          echo "Using schema version: $SCHEMA_VERSION"
+          echo "schema_version=$SCHEMA_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Update Cargo version
+        run: |
+          sed -i 's/^version = ".*"/version = "${{ steps.schema.outputs.schema_version }}"/' Cargo.toml
+
+      - name: Build
+        run: cargo build --release
+
+      - name: Run tests
+        run: cargo test
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: rust-v${{ steps.schema.outputs.schema_version }}
+          name: Rust Crate v${{ steps.schema.outputs.schema_version }}
+          body: |
+            Rust crate release for schema version ${{ steps.schema.outputs.schema_version }}
+
+            Changes:
+            - Updated schemas to version ${{ steps.schema.outputs.schema_version }}
+          files: |
+            rust/target/release/libpacts.rlib
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
