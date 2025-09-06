@@ -2,14 +2,17 @@ name: Build & Publish Rust Crate
 
 on:
   push:
+    branches:
+      - main
     paths:
       - "schemas/**"
       - "rust/**"
+      - "rust/Cargo.toml"
   workflow_dispatch:
 
 jobs:
   build-rust:
-    name: Build and Publish Rust Crate
+    name: Build and Release Rust Crate
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -55,21 +58,19 @@ jobs:
       - name: Create Combined Version
         id: version
         run: |
-          COMBINED_VERSION="${{ steps.impl.outputs.impl_version }}-schema.${{ steps.schema.outputs.schema_version }}"
+          COMBINED_VERSION="${{ steps.impl.outputs.impl_version }}+schema.${{ steps.schema.outputs.schema_version }}"
           echo "Using combined version: $COMBINED_VERSION"
           echo "combined_version=$COMBINED_VERSION" >> $GITHUB_OUTPUT
-
-      - name: Install cargo-edit
-        run: cargo install cargo-edit
-
-      - name: Update Cargo version
-        run: cargo set-version ${{ steps.version.outputs.combined_version }}
 
       - name: Build
         run: cargo build --release
 
       - name: Run tests
         run: cargo test
+
+      - name: Rename staticlib for GitHub Release
+        run: |
+          cp target/release/libpacts.a target/release/libpacts-${{ steps.version.outputs.combined_version }}.a
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -83,6 +84,6 @@ jobs:
             - Implementation version: ${{ steps.impl.outputs.impl_version }}
             - Schema version: ${{ steps.schema.outputs.schema_version }}
           files: |
-            rust/target/release/libpacts.rlib
+            rust/target/release/libpacts-${{ steps.version.outputs.combined_version }}.a
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

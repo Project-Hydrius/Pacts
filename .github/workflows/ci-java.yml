@@ -2,10 +2,12 @@ name: Build & Publish on Schema Change
 
 on:
   push:
+    branches:
+      - main
     paths:
       - "schemas/**"
       - "java/**"
-      - "pom.xml"
+      - "java/pom.xml"
   workflow_dispatch:
 
 jobs:
@@ -55,12 +57,14 @@ jobs:
           echo "Using combined version: $COMBINED_VERSION"
           echo "combined_version=$COMBINED_VERSION" >> $GITHUB_OUTPUT
 
-      - name: Update POM version
-        run: |
-          mvn versions:set -DnewVersion=${{ steps.version.outputs.combined_version }} -DgenerateBackupPoms=false
-
       - name: Build with Maven
         run: mvn clean package
+
+      - name: Rename Artifacts for GitHub Release
+        run: |
+          mv target/pacts-${{ steps.impl.outputs.impl_version }}.jar target/pacts-${{ steps.version.outputs.combined_version }}.jar
+          mv target/pacts-${{ steps.impl.outputs.impl_version }}-sources.jar target/pacts-${{ steps.version.outputs.combined_version }}-sources.jar
+          mv target/pacts-${{ steps.impl.outputs.impl_version }}-javadoc.jar target/pacts-${{ steps.version.outputs.combined_version }}-javadoc.jar
 
       - name: Publish to GitHub Packages
         env:
