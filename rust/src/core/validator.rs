@@ -141,6 +141,7 @@ impl Validator {
             "array" => data.is_array(),
             "string" => data.is_string(),
             "number" => data.is_number(),
+            "integer" => data.is_i64() || data.is_u64(),
             "boolean" => data.is_boolean(),
             "null" => data.is_null(),
             _ => true,

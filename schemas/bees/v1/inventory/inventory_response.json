@@ -1,32 +1,96 @@
 {
+    "$schema": "https://json-schema.org/draft-07/schema#",
+    "$id": "inventory_response.json",
     "type": "object",
+    "title": "InventoryResponse",
+    "description": "A response object containing inventory data and associated metadata.",
+    "deprecated": false,
     "properties": {
         "date": {
             "type": "string",
-            "format": "date-time"
+            "format": "date-time",
+            "description": "The date and time of the response, in ISO 8601 format.",
+            "examples": [
+                "2025-09-05T15:30:00Z",
+                "2025-04-30T13:55:25Z"
+            ]
         },
         "request_type": {
-            "type": "string"
+            "type": "string",
+            "description": "The type of request that was made (e.g., 'INVENTORY_GET', 'INVENTORY_UPDATE').",
+            "examples": [
+                "INVENTORY_GET",
+                "INVENTORY_CREATE"
+            ]
         },
         "response_status": {
-            "type": "string"
+            "type": "string",
+            "description": "The status of the response.",
+            "examples": [
+                "OK",
+                "PARTIAL"
+            ]
         },
         "target_id": {
-            "type": "string"
+            "type": "string",
+            "format": "uuid",
+            "description": "The UUID of the target player or entity.",
+            "examples": [
+                "123e4567-e89b-12d3-a456-426614174000",
+                "ddd44444-5555-6666-7777-888899990000"
+            ]
         },
         "profile_id": {
-            "type": "string"
+            "type": "string",
+            "format": "uuid",
+            "description": "The UUID of the profile.",
+            "examples": [
+                "987e6543-e21b-34c3-b456-426614174999",
+                "eee55555-6666-7777-8888-999900001111"
+            ]
         },
         "response_message": {
-            "type": "string"
+            "type": [
+                "string",
+                "null"
+            ],
+            "description": "Optional message providing context or detail about the response.",
+            "examples": [
+                "Inventory returned successfully.",
+                "Inventory partially loaded."
+            ]
         },
         "inventory": {
-            "type": "array",
-            "description": "Array of inventory items",
+            "type": [
+                "array",
+                "null"
+            ],
+            "description": "Array of inventory items attached to the profile.",
+            "readOnly": true,
             "items": {
-                "description": "Array of inventory items",
                 "$ref": "inventory_item.json"
-            }
+            },
+            "examples": [
+                [
+                    {
+                        "material": "diamond",
+                        "slot": 5,
+                        "amount": 3
+                    }
+                ],
+                [
+                    {
+                        "material": "iron_sword",
+                        "slot": 1,
+                        "amount": 1
+                    },
+                    {
+                        "material": "bread",
+                        "slot": 9,
+                        "amount": 16
+                    }
+                ]
+            ]
         }
     },
     "required": [
@@ -36,5 +100,5 @@
         "target_id",
         "profile_id"
     ],
-    "additionalProperties": false
+    "additionalProperties": true
 }

@@ -1,0 +1,91 @@
+name: Build & Publish on Schema Change
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "schemas/**"
+      - "java/**"
+      - "java/pom.xml"
+  workflow_dispatch:
+
+jobs:
+  build-java:
+    name: Build and Publish Java Package
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+
+    defaults:
+      run:
+        working-directory: java
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: 17
+          cache: "maven"
+          server-id: "github"
+          server-username: "${{ github.actor }}"
+          server-password: "${{ secrets.GITHUB_TOKEN }}"
+
+      - name: Read Schema Version
+        id: schema
+        run: |
+          SCHEMA_VERSION=$(cat ../schemas/VERSION | tr -d '\n')
+          echo "Using schema version: $SCHEMA_VERSION"
+          echo "schema_version=$SCHEMA_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Read Implementation Version
+        id: impl
+        run: |
+          IMPL_VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+          echo "Using implementation version: $IMPL_VERSION"
+          echo "impl_version=$IMPL_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Create Combined Version
+        id: version
+        run: |
+          COMBINED_VERSION="${{ steps.impl.outputs.impl_version }}-schema-${{ steps.schema.outputs.schema_version }}"
+          echo "Using combined version: $COMBINED_VERSION"
+          echo "combined_version=$COMBINED_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Build with Maven
+        run: mvn clean package
+
+      - name: Rename Artifacts for GitHub Release
+        run: |
+          mv target/pacts-${{ steps.impl.outputs.impl_version }}.jar target/pacts-${{ steps.version.outputs.combined_version }}.jar
+          mv target/pacts-${{ steps.impl.outputs.impl_version }}-sources.jar target/pacts-${{ steps.version.outputs.combined_version }}-sources.jar
+          mv target/pacts-${{ steps.impl.outputs.impl_version }}-javadoc.jar target/pacts-${{ steps.version.outputs.combined_version }}-javadoc.jar
+
+      - name: Publish to GitHub Packages
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_ACTOR: ${{ github.actor }}
+        run: mvn deploy --batch-mode
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: java-v${{ steps.version.outputs.combined_version }}
+          name: Java Package v${{ steps.version.outputs.combined_version }}
+          body: |
+            Java package release for version ${{ steps.version.outputs.combined_version }}
+
+            Changes:
+            - Implementation version: ${{ steps.impl.outputs.impl_version }}
+            - Schema version: ${{ steps.schema.outputs.schema_version }}
+          files: |
+            java/target/pacts-${{ steps.version.outputs.combined_version }}.jar
+            java/target/pacts-${{ steps.version.outputs.combined_version }}-sources.jar
+            java/target/pacts-${{ steps.version.outputs.combined_version }}-javadoc.jar
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

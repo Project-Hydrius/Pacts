@@ -6,8 +6,8 @@ import java.util.List;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+
 import net.hydrius.pacts.model.Envelope;
 import net.hydrius.pacts.model.Header;
 
@@ -70,7 +70,7 @@ public class Validator {
                     ValidationResult dataValidation = validateData(envelope.getData(), schema);
                     errors.addAll(dataValidation.getErrors());
                 }
-                
+
             }
 
         } catch (Exception e) {
@@ -97,6 +97,8 @@ public class Validator {
                 data.isTextual();
             case "number" ->
                 data.isNumber();
+            case "integer" ->
+                data.isIntegralNumber();
             case "boolean" ->
                 data.isBoolean();
             case "null" ->

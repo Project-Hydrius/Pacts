@@ -1,20 +1,42 @@
 {
+    "$schema": "https://json-schema.org/draft-07/schema#",
+    "$id": "profile_request.json",
     "type": "object",
+    "title": "ProfileRequest",
+    "description": "A request object for profile operations",
+    "deprecated": false,
     "properties": {
         "date": {
             "type": "string",
-            "format": "date-time"
+            "format": "date-time",
+            "description": "The timestamp of the request (ISO 8601 format)",
+            "examples": [
+                "2025-09-05T15:30:00Z",
+                "2025-11-20T14:25:15Z"
+            ]
         },
         "request_type": {
-            "type": "string"
+            "type": "string",
+            "description": "The type of profile request being made",
+            "examples": [
+                "PROFILE_GET",
+                "PROFILE_UPDATE"
+            ]
         },
         "target_id": {
-            "type": "string"
+            "type": "string",
+            "format": "uuid",
+            "description": "The UUID of the target profile or player",
+            "examples": [
+                "123e4567-e89b-12d3-a456-426614174000",
+                "789e0123-f456-78g9-h012-345678901234"
+            ]
         }
     },
     "required": [
         "date",
         "request_type",
         "target_id"
-    ]
+    ],
+    "additionalProperties": true
 }

@@ -1,0 +1,89 @@
+name: Build & Publish Rust Crate
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "schemas/**"
+      - "rust/**"
+      - "rust/Cargo.toml"
+  workflow_dispatch:
+
+jobs:
+  build-rust:
+    name: Build and Release Rust Crate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    defaults:
+      run:
+        working-directory: rust
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@v1
+        with:
+          toolchain: stable
+
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            rust/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Read Schema Version
+        id: schema
+        run: |
+          SCHEMA_VERSION=$(cat ../schemas/VERSION | tr -d '\n')
+          echo "Using schema version: $SCHEMA_VERSION"
+          echo "schema_version=$SCHEMA_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Read Implementation Version
+        id: impl
+        run: |
+          IMPL_VERSION=$(grep '^version = ' Cargo.toml | sed 's/version = "\(.*\)"/\1/')
+          echo "Using implementation version: $IMPL_VERSION"
+          echo "impl_version=$IMPL_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Create Combined Version
+        id: version
+        run: |
+          COMBINED_VERSION="${{ steps.impl.outputs.impl_version }}+schema.${{ steps.schema.outputs.schema_version }}"
+          echo "Using combined version: $COMBINED_VERSION"
+          echo "combined_version=$COMBINED_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Build
+        run: cargo build --release
+
+      - name: Run tests
+        run: cargo test
+
+      - name: Rename staticlib for GitHub Release
+        run: |
+          cp target/release/libpacts.a target/release/libpacts-${{ steps.version.outputs.combined_version }}.a
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: rust-v${{ steps.version.outputs.combined_version }}
+          name: Rust Crate v${{ steps.version.outputs.combined_version }}
+          body: |
+            Rust crate release for version ${{ steps.version.outputs.combined_version }}
+
+            Changes:
+            - Implementation version: ${{ steps.impl.outputs.impl_version }}
+            - Schema version: ${{ steps.schema.outputs.schema_version }}
+          files: |
+            rust/target/release/libpacts-${{ steps.version.outputs.combined_version }}.a
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
