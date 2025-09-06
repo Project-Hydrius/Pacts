@@ -45,11 +45,25 @@ jobs:
           echo "Using schema version: $SCHEMA_VERSION"
           echo "schema_version=$SCHEMA_VERSION" >> $GITHUB_OUTPUT
 
+      - name: Read Implementation Version
+        id: impl
+        run: |
+          IMPL_VERSION=$(grep '^version = ' Cargo.toml | sed 's/version = "\(.*\)"/\1/')
+          echo "Using implementation version: $IMPL_VERSION"
+          echo "impl_version=$IMPL_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Create Combined Version
+        id: version
+        run: |
+          COMBINED_VERSION="${{ steps.impl.outputs.impl_version }}-schema.${{ steps.schema.outputs.schema_version }}"
+          echo "Using combined version: $COMBINED_VERSION"
+          echo "combined_version=$COMBINED_VERSION" >> $GITHUB_OUTPUT
+
       - name: Install cargo-edit
         run: cargo install cargo-edit
 
       - name: Update Cargo version
-        run: cargo set-version ${{ steps.schema.outputs.schema_version }}
+        run: cargo set-version ${{ steps.version.outputs.combined_version }}
 
       - name: Build
         run: cargo build --release
@@ -60,13 +74,14 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: rust-v${{ steps.schema.outputs.schema_version }}
-          name: Rust Crate v${{ steps.schema.outputs.schema_version }}
+          tag_name: rust-v${{ steps.version.outputs.combined_version }}
+          name: Rust Crate v${{ steps.version.outputs.combined_version }}
           body: |
-            Rust crate release for schema version ${{ steps.schema.outputs.schema_version }}
+            Rust crate release for version ${{ steps.version.outputs.combined_version }}
 
             Changes:
-            - Updated schemas to version ${{ steps.schema.outputs.schema_version }}
+            - Implementation version: ${{ steps.impl.outputs.impl_version }}
+            - Schema version: ${{ steps.schema.outputs.schema_version }}
           files: |
             rust/target/release/libpacts.rlib
         env:

@@ -41,9 +41,23 @@ jobs:
           echo "Using schema version: $SCHEMA_VERSION"
           echo "schema_version=$SCHEMA_VERSION" >> $GITHUB_OUTPUT
 
+      - name: Read Implementation Version
+        id: impl
+        run: |
+          IMPL_VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+          echo "Using implementation version: $IMPL_VERSION"
+          echo "impl_version=$IMPL_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Create Combined Version
+        id: version
+        run: |
+          COMBINED_VERSION="${{ steps.impl.outputs.impl_version }}-schema-${{ steps.schema.outputs.schema_version }}"
+          echo "Using combined version: $COMBINED_VERSION"
+          echo "combined_version=$COMBINED_VERSION" >> $GITHUB_OUTPUT
+
       - name: Update POM version
         run: |
-          mvn versions:set -DnewVersion=${{ steps.schema.outputs.schema_version }} -DgenerateBackupPoms=false
+          mvn versions:set -DnewVersion=${{ steps.version.outputs.combined_version }} -DgenerateBackupPoms=false
 
       - name: Build with Maven
         run: mvn clean package
@@ -57,16 +71,17 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: java-v${{ steps.schema.outputs.schema_version }}
-          name: Java Package v${{ steps.schema.outputs.schema_version }}
+          tag_name: java-v${{ steps.version.outputs.combined_version }}
+          name: Java Package v${{ steps.version.outputs.combined_version }}
           body: |
-            Java package release for schema version ${{ steps.schema.outputs.schema_version }}
+            Java package release for version ${{ steps.version.outputs.combined_version }}
 
             Changes:
-            - Updated schemas to version ${{ steps.schema.outputs.schema_version }}
+            - Implementation version: ${{ steps.impl.outputs.impl_version }}
+            - Schema version: ${{ steps.schema.outputs.schema_version }}
           files: |
-            java/target/pacts-${{ steps.schema.outputs.schema_version }}.jar
-            java/target/pacts-${{ steps.schema.outputs.schema_version }}-sources.jar
-            java/target/pacts-${{ steps.schema.outputs.schema_version }}-javadoc.jar
+            java/target/pacts-${{ steps.version.outputs.combined_version }}.jar
+            java/target/pacts-${{ steps.version.outputs.combined_version }}-sources.jar
+            java/target/pacts-${{ steps.version.outputs.combined_version }}-javadoc.jar
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
