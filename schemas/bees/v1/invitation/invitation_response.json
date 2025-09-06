@@ -1,5 +1,5 @@
 {
-    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$schema": "https://json-schema.org/draft-07/schema#",
     "$id": "invitation_response.json",
     "type": "object",
     "title": "InvitationResponse",
@@ -10,34 +10,53 @@
             "type": "string",
             "format": "date-time",
             "description": "The timestamp of the response (ISO 8601 format)",
-            "example": "2025-09-05T15:30:00Z"
+            "examples": [
+                "2025-09-05T15:30:00Z",
+                "2025-02-28T12:10:35Z"
+            ]
         },
         "request_type": {
             "type": "string",
             "description": "The type of invitation request that was made",
-            "example": "INVITATION_GET"
+            "examples": [
+                "INVITATION_GET",
+                "INVITATION_ACCEPT"
+            ]
         },
         "response_status": {
             "type": "string",
             "description": "The status of the response",
-            "example": "OK"
+            "examples": [
+                "OK",
+                "FAILED"
+            ]
         },
         "target_id": {
             "type": "string",
             "format": "uuid",
             "description": "The UUID of the target player",
-            "example": "123e4567-e89b-12d3-a456-426614174000"
+            "examples": [
+                "123e4567-e89b-12d3-a456-426614174000",
+                "hhh88888-9999-0000-1111-222233334444"
+            ]
         },
         "response_message": {
-            "type": "string",
+            "type": [
+                "string",
+                "null"
+            ],
             "description": "Optional message providing context about the response",
-            "nullable": true,
-            "example": "Invitation data retrieved successfully"
+            "examples": [
+                "Invitation data retrieved successfully",
+                "Invitation accepted successfully"
+            ]
         },
         "invitations": {
-            "type": "array",
+            "type": [
+                "array",
+                "null"
+            ],
             "description": "Array of invitations",
-            "nullable": true,
             "readOnly": true,
             "items": {
                 "$ref": "invitation.json"

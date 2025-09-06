@@ -1,5 +1,5 @@
 {
-    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$schema": "https://json-schema.org/draft-07/schema#",
     "$id": "inventory_item.json",
     "type": "object",
     "title": "InventoryItem",
@@ -7,39 +7,58 @@
     "deprecated": false,
     "properties": {
         "slot": {
-            "type": "number",
+            "type": "integer",
             "description": "The inventory slot number",
             "minimum": 0,
-            "example": 5
+            "examples": [
+                0,
+                1,
+                4,
+                20
+            ]
         },
         "material": {
             "type": "string",
             "description": "The material/block type of the item",
-            "example": "minecraft:diamond_sword"
+            "examples": [
+                "minecraft:diamond_sword",
+                "minecraft:dirt"
+            ]
         },
         "amount": {
             "type": "number",
             "description": "The quantity of the item",
             "minimum": 1,
-            "example": 64
+            "examples": [
+                64,
+                32
+            ]
         },
         "enchantment_data": {
-            "type": "array",
+            "type": [
+                "array",
+                "null"
+            ],
             "description": "Array of enchantments applied to the item",
-            "nullable": true,
             "items": {
                 "type": "object",
                 "properties": {
                     "enchantment_id": {
                         "type": "string",
                         "description": "The enchantment identifier",
-                        "example": "minecraft:sharpness"
+                        "examples": [
+                            "minecraft:sharpness",
+                            "minecraft:fire_aspect"
+                        ]
                     },
                     "enchantment_level": {
                         "type": "number",
                         "description": "The level of the enchantment",
                         "minimum": 1,
-                        "example": 3
+                        "examples": [
+                            3,
+                            5
+                        ]
                     }
                 },
                 "required": [
@@ -49,9 +68,11 @@
             }
         },
         "nbt_data": {
-            "type": "object",
+            "type": [
+                "object",
+                "null"
+            ],
             "description": "Custom NBT data for the item",
-            "nullable": true,
             "properties": {
                 "id": {
                     "type": "string",
@@ -76,7 +97,7 @@
                         "type": "object",
                         "properties": {
                             "slot": {
-                                "type": "number",
+                                "type": "integer",
                                 "description": "Nectar slot number"
                             },
                             "statistics": {

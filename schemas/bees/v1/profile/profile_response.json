@@ -1,5 +1,5 @@
 {
-    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$schema": "https://json-schema.org/draft-07/schema#",
     "$id": "profile_response.json",
     "type": "object",
     "title": "ProfileResponse",
@@ -11,45 +11,67 @@
             "format": "date-time",
             "description": "The date and time of the response, in ISO 8601 format",
             "readOnly": true,
-            "example": "2025-09-05T15:30:00Z"
+            "examples": [
+                "2025-09-05T15:30:00Z",
+                "2025-08-12T16:20:30Z"
+            ]
         },
         "request_type": {
             "type": "string",
             "description": "The type of request that was made",
             "readOnly": true,
-            "example": "PROFILE_GET"
+            "examples": [
+                "PROFILE_GET",
+                "PROFILE_CREATE"
+            ]
         },
         "response_status": {
             "type": "string",
             "description": "The status of the response",
             "readOnly": true,
-            "example": "OK"
+            "examples": [
+                "OK",
+                "ERROR"
+            ]
         },
         "target_id": {
             "type": "string",
             "format": "uuid",
             "description": "The UUID of the target player",
             "readOnly": true,
-            "example": "123e4567-e89b-12d3-a456-426614174000"
+            "examples": [
+                "123e4567-e89b-12d3-a456-426614174000",
+                "fed98765-4321-0987-6543-210987654321"
+            ]
         },
         "response_message": {
-            "type": "string",
+            "type": [
+                "string",
+                "null"
+            ],
             "description": "Optional message providing context about the response",
-            "nullable": true,
             "readOnly": true,
-            "example": "Profile data retrieved successfully"
+            "examples": [
+                "Profile data retrieved successfully",
+                "Profile created successfully"
+            ]
         },
         "profile_id": {
             "type": "string",
             "format": "uuid",
             "description": "The UUID of the target profile",
             "readOnly": true,
-            "example": "987e6543-e21b-34c3-b456-426614174999"
+            "examples": [
+                "987e6543-e21b-34c3-b456-426614174999",
+                "111e2222-3333-4444-5555-666677778888"
+            ]
         },
         "profiles": {
-            "type": "array",
+            "type": [
+                "array",
+                "null"
+            ],
             "description": "Profile data",
-            "nullable": true,
             "readOnly": true,
             "items": {
                 "description": "Array of profiles",

@@ -5,7 +5,6 @@ on:
     paths:
       - "schemas/**"
       - "java/**"
-      - ".github/workflows/**"
       - "pom.xml"
   workflow_dispatch:
 
@@ -30,14 +29,10 @@ jobs:
         with:
           distribution: "temurin"
           java-version: 17
-
-      - name: Cache Maven packages
-        uses: actions/cache@v3
-        with:
-          path: ~/.m2
-          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |
-            ${{ runner.os }}-m2-
+          cache: "maven"
+          server-id: "github"
+          server-username: "${{ github.actor }}"
+          server-password: "${{ secrets.GITHUB_TOKEN }}"
 
       - name: Read Schema Version
         id: schema
@@ -56,10 +51,11 @@ jobs:
       - name: Publish to GitHub Packages
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_ACTOR: ${{ github.actor }}
         run: mvn deploy --batch-mode
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: java-v${{ steps.schema.outputs.schema_version }}
           name: Java Package v${{ steps.schema.outputs.schema_version }}

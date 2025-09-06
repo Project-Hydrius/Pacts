@@ -1,5 +1,5 @@
 {
-    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$schema": "https://json-schema.org/draft-07/schema#",
     "$id": "profile.json",
     "type": "object",
     "title": "Profile",
@@ -10,7 +10,10 @@
             "type": "string",
             "format": "uuid",
             "description": "Unique identifier for the profile",
-            "example": "987e6543-e21b-34c3-b456-426614174999"
+            "examples": [
+                "987e6543-e21b-34c3-b456-426614174999",
+                "abc12345-f678-90de-f123-456789abcdef"
+            ]
         },
         "members": {
             "type": "array",

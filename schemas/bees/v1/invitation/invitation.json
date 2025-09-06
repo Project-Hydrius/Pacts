@@ -1,5 +1,5 @@
 {
-    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$schema": "https://json-schema.org/draft-07/schema#",
     "$id": "invitation.json",
     "type": "object",
     "title": "Invitation",
@@ -10,13 +10,19 @@
             "type": "string",
             "format": "uuid",
             "description": "The UUID of the sender of the invitation",
-            "example": "123e4567-e89b-12d3-a456-426614174000"
+            "examples": [
+                "123e4567-e89b-12d3-a456-426614174000",
+                "iii99999-0000-1111-2222-333344445555"
+            ]
         },
         "receiver_id": {
             "type": "string",
             "format": "uuid",
             "description": "The UUID of the recipient of the invitation",
-            "example": "987e6543-e21b-34c3-b456-426614174999"
+            "examples": [
+                "987e6543-e21b-34c3-b456-426614174999",
+                "jjj00000-1111-2222-3333-444455556666"
+            ]
         },
         "status": {
             "type": "string",
@@ -27,25 +33,37 @@
                 "DECLINED",
                 "EXPIRED"
             ],
-            "example": "PENDING"
+            "examples": [
+                "PENDING",
+                "ACCEPTED"
+            ]
         },
         "created_at": {
             "type": "string",
             "format": "date-time",
             "description": "The timestamp of the invitation creation",
-            "example": "2025-09-05T15:30:00Z"
+            "examples": [
+                "2025-09-05T15:30:00Z",
+                "2025-01-15T09:30:15Z"
+            ]
         },
         "profile_id": {
             "type": "string",
             "format": "uuid",
             "description": "The UUID of the profile associated with the invitation",
-            "example": "987e6543-e21b-34c3-b456-426614174999"
+            "examples": [
+                "987e6543-e21b-34c3-b456-426614174999",
+                "jjj00000-1111-2222-3333-444455556666"
+            ]
         },
         "party_id": {
             "type": "string",
             "format": "uuid",
             "description": "The UUID of the party associated with the invitation",
-            "example": "987e6543-e21b-34c3-b456-426614174999"
+            "examples": [
+                "987e6543-e21b-34c3-b456-426614174999",
+                "jjj00000-1111-2222-3333-444455556666"
+            ]
         }
     },
     "required": [
