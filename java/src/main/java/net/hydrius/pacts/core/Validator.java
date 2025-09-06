@@ -98,7 +98,7 @@ public class Validator {
             case "number" ->
                 data.isNumber();
             case "integer" ->
-                data.isInt();
+                data.isIntegralNumber();
             case "boolean" ->
                 data.isBoolean();
             case "null" ->
