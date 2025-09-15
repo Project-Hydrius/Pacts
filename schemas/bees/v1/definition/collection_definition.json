@@ -36,7 +36,10 @@
         },
         "entries": {
             "type": "array",
-            "description": "Items of the collection definition"
+            "description": "Items of the collection definition",
+            "items": {
+                "type": "object"
+            }
         }
     },
     "required": [

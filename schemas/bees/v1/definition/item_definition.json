@@ -64,8 +64,10 @@
             ],
             "description": "Tags of the item definition",
             "examples": [
-                "MATERIAL",
-                "WEAPON"
+                [
+                    "MATERIAL",
+                    "WEAPON"
+                ]
             ]
         },
         "statistics": {
@@ -126,8 +128,9 @@
                         ]
                     },
                     "amount": {
-                        "type": "number",
+                        "type": "integer",
                         "description": "Amount of the item recipe",
+                        "minimum": 1,
                         "examples": [
                             1,
                             2
