@@ -1,0 +1,27 @@
+{
+    "$schema": "https://json-schema.org/draft-07/schema#",
+    "$id": "server_request.json",
+    "type": "object",
+    "title": "Server Request",
+    "description": "A server request schema",
+    "deprecated": false,
+    "properties": {
+        "date": {
+            "type": "string",
+            "format": "date-time",
+            "description": "The timestamp of the request (ISO 8601 format)",
+            "examples": [
+                "2025-09-05T15:30:00Z",
+                "2025-11-20T14:25:15Z"
+            ]
+        },
+        "request_type": {
+            "type": "string",
+            "description": "The type of server request being made",
+            "examples": [
+                "SERVER_STATUS",
+                "SERVER_RESTART"
+            ]
+        }
+    }
+}
