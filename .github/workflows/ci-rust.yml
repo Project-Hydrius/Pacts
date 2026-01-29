@@ -5,7 +5,6 @@ on:
     branches:
       - main
     paths:
-      - "schemas/**"
       - "rust/**"
       - "rust/Cargo.toml"
   workflow_dispatch:
@@ -41,26 +40,12 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-
 
-      - name: Read Schema Version
-        id: schema
-        run: |
-          SCHEMA_VERSION=$(cat ../schemas/VERSION | tr -d '\n')
-          echo "Using schema version: $SCHEMA_VERSION"
-          echo "schema_version=$SCHEMA_VERSION" >> $GITHUB_OUTPUT
-
       - name: Read Implementation Version
         id: impl
         run: |
           IMPL_VERSION=$(grep '^version = ' Cargo.toml | sed 's/version = "\(.*\)"/\1/')
           echo "Using implementation version: $IMPL_VERSION"
           echo "impl_version=$IMPL_VERSION" >> $GITHUB_OUTPUT
-
-      - name: Create Combined Version
-        id: version
-        run: |
-          COMBINED_VERSION="${{ steps.impl.outputs.impl_version }}+schema.${{ steps.schema.outputs.schema_version }}"
-          echo "Using combined version: $COMBINED_VERSION"
-          echo "combined_version=$COMBINED_VERSION" >> $GITHUB_OUTPUT
 
       - name: Build
         run: cargo build --release
@@ -70,20 +55,19 @@ jobs:
 
       - name: Rename staticlib for GitHub Release
         run: |
-          cp target/release/libpacts.a target/release/libpacts-${{ steps.version.outputs.combined_version }}.a
+          cp target/release/libpacts.a target/release/libpacts-${{ steps.version.outputs.impl_version }}.a
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: rust-v${{ steps.version.outputs.combined_version }}
-          name: Rust Crate v${{ steps.version.outputs.combined_version }}
+          tag_name: rust-v${{ steps.version.outputs.impl_version }}
+          name: Rust Crate v${{ steps.version.outputs.impl_version }}
           body: |
-            Rust crate release for version ${{ steps.version.outputs.combined_version }}
+            Rust crate release for version ${{ steps.version.outputs.impl_version }}
 
             Changes:
             - Implementation version: ${{ steps.impl.outputs.impl_version }}
-            - Schema version: ${{ steps.schema.outputs.schema_version }}
           files: |
-            rust/target/release/libpacts-${{ steps.version.outputs.combined_version }}.a
+            rust/target/release/libpacts-${{ steps.version.outputs.impl_version }}.a
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
