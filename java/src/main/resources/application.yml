@@ -1,0 +1,6 @@
+logging:
+  level:
+    root: INFO
+    net.hydrius: DEBUG
+sources:
+  - "https://github.com/Project-Hydrius/Schemas/archive/refs/heads/main.zip"

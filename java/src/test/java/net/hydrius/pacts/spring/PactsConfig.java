@@ -1,5 +1,7 @@
 package net.hydrius.pacts.spring;
 
+import java.io.IOException;
+
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -19,7 +21,7 @@ public class PactsConfig {
     }
 
     @Bean
-    public SchemaLoader schemaLoader() {
+    public SchemaLoader schemaLoader() throws IOException {
         return new SchemaLoader("schemas", "bees", "v1");
     }
 

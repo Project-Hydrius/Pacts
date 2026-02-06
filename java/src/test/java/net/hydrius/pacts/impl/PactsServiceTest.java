@@ -2,6 +2,7 @@ package net.hydrius.pacts.impl;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -20,7 +21,7 @@ class PactsServiceTest {
     private PactsService pactsService;
 
     @BeforeEach
-    void setup() {
+    void setup() throws IOException {
         SchemaLoader schemaLoader = new SchemaLoader("schemas", "bees", "v1");
         pactsService = new PactsService(schemaLoader);
     }
