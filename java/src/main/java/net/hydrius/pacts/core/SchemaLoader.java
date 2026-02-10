@@ -109,30 +109,31 @@ public class SchemaLoader {
             if (stream == null) {
                 logger.warning("Application Settings not found");
             } else {
-                // Load YAML settings using SnakeYAML or similar
-                // For now, we'll manually parse the YAML structure
-                Scanner scanner = new Scanner(stream).useDelimiter("\\A");
-                String yamlContent = scanner.hasNext() ? scanner.next() : "";
+                try (// Load YAML settings using SnakeYAML or similar
+                     // For now, we'll manually parse the YAML structure
+                Scanner scanner = new Scanner(stream).useDelimiter("\\A")) {
+                    String yamlContent = scanner.hasNext() ? scanner.next() : "";
 
-                // Simple parsing for sources array - in a real implementation you would use a
-                // proper YAML parser
-                if (yamlContent.contains("sources:")) {
-                    settings = objectMapper.createObjectNode();
-                    ArrayNode sourcesArray = objectMapper.createArrayNode();
+                    // Simple parsing for sources array - in a real implementation you would use a
+                    // proper YAML parser
+                    if (yamlContent.contains("sources:")) {
+                        settings = objectMapper.createObjectNode();
+                        ArrayNode sourcesArray = objectMapper.createArrayNode();
 
-                    // Extract sources from YAML (simplified parsing)
-                    String[] lines = yamlContent.split("\n");
-                    for (String line : lines) {
-                        if (line.trim().startsWith("- ")) {
-                            String source = line.trim().substring(2).trim();
-                            if (source.startsWith("\"") && source.endsWith("\"")) {
-                                source = source.substring(1, source.length() - 1);
+                        // Extract sources from YAML (simplified parsing)
+                        String[] lines = yamlContent.split("\n");
+                        for (String line : lines) {
+                            if (line.trim().startsWith("- ")) {
+                                String source = line.trim().substring(2).trim();
+                                if (source.startsWith("\"") && source.endsWith("\"")) {
+                                    source = source.substring(1, source.length() - 1);
+                                }
+                                sourcesArray.add(source);
                             }
-                            sourcesArray.add(source);
                         }
-                    }
 
-                    ((ObjectNode) settings).set("sources", sourcesArray);
+                        ((ObjectNode) settings).set("sources", sourcesArray);
+                    }
                 }
             }
         } catch (Exception e) {
