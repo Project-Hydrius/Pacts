@@ -2,7 +2,6 @@
 name = "pacts"
 version = "0.0.4"
 edition = "2021"
-build = "build.rs"
 
 [lib]
 crate-type = ["rlib", "staticlib"]
@@ -13,7 +12,8 @@ serde_json = "1.0"
 chrono = { version = "0.4", features = ["serde"] }
 anyhow = "1.0"
 regex = "1.0"
-rust-embed = "8.5"
+zip = { version = "0.6", default-features = false, features = ["deflate"] }
 
 [dev-dependencies]
-tempfile = "3.0"
+# tempfile temporarily removed due to Rust version compatibility issues
+# tempfile = "3.8"

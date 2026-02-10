@@ -3,25 +3,29 @@ use std::fs;
 use std::path::Path;
 
 fn main() {
-    // Get the directory where the build script is located
-    let manifest_dir = env::var("CARGO_MANIFEST_DIR").unwrap();
-    let schemas_dir = Path::new(&manifest_dir).parent().unwrap().join("schemas");
-    let version_file = schemas_dir.join("VERSION");
-
-    // Tell Cargo to rerun this build script if the schemas directory changes
-    println!("cargo:rerun-if-changed={}", schemas_dir.display());
-
-    // Pass schema path into build
-    if schemas_dir.exists() {
-        println!("cargo:rustc-env=SCHEMAS_DIR={}", schemas_dir.display());
-    }
-
-    // Read schema version and expose it
-    if version_file.exists() {
-        let version = fs::read_to_string(version_file)
-            .expect("Failed to read schema version file")
-            .trim()
-            .to_string();
-        println!("cargo:rustc-env=SCHEMA_VERSION={}", version);
+    // Get the project root directory (parent of the directory containing Cargo.toml)
+    let manifest_dir = env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not set");
+    let project_root = Path::new(&manifest_dir).parent().expect("Failed to get project root");
+    
+    // Source file path (in rust/resources folder)
+    let source_file = Path::new(&manifest_dir).join("resources/sources.yaml");
+    
+    // Output directory (target directory)
+    let out_dir = env::var("OUT_DIR").expect("OUT_DIR not set");
+    let target_dir = Path::new(&out_dir)
+        .parent()
+        .and_then(|p| p.parent())
+        .and_then(|p| p.parent())
+        .expect("Failed to determine target directory");
+    
+    // Destination path
+    let dest_file = target_dir.join("sources.yaml");
+    
+    // Copy the file if it exists
+    if source_file.exists() {
+        fs::copy(&source_file, &dest_file).expect("Failed to copy sources.yaml");
+        println!("cargo:rerun-if-changed={}", source_file.display());
+    } else {
+        panic!("sources.yaml not found in resources folder: {}", source_file.display());
     }
 }
