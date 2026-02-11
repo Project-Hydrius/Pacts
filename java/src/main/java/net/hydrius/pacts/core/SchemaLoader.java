@@ -65,7 +65,7 @@ public class SchemaLoader {
         try {
             loadRemoteSchemas();
         } catch (IOException e) {
-            logger.warning("Remote schema loading failed, falling back to local file system only: " + e.getMessage());
+            logger.warning(() -> "Remote schema loading failed, falling back to local file system only: " + e.getMessage());
         }
     }
 

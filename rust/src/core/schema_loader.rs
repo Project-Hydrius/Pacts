@@ -3,7 +3,6 @@ use serde::Deserialize;
 use serde_json::Value;
 use std::collections::HashMap;
 use std::io::Read;
-use std::process::Command;
 
 use zip::read::ZipArchive;
 
@@ -94,11 +93,16 @@ impl SchemaLoader {
         let mut sources_loaded = false;
         
         for source in sources {
+            let cache_size_before = self.schema_cache.len();
             match self.load_schemas_from_zip_url(&source) {
                 Ok(_) => {
-                    eprintln!("Successfully loaded schemas from: {}", source);
-                    sources_loaded = true;
-                    break;
+                    if self.schema_cache.len() > cache_size_before {
+                        eprintln!("Successfully loaded schemas from: {}", source);
+                        sources_loaded = true;
+                        break;
+                    } else {
+                        eprintln!("ZIP from {} contained no loadable schemas, trying next source", source);
+                    }
                 }
                 Err(e) => {
                     eprintln!("Failed to load schemas from {}: {}", source, e);
@@ -118,7 +122,7 @@ impl SchemaLoader {
     /// # Returns
     /// Result containing vector of source URLs
     fn load_sources_config(&self) -> Result<Vec<String>> {
-        const SOURCES_YAML: &str = include_str!("../../resources/sources.yaml");
+        const SOURCES_YAML: &str = include_str!(concat!(env!("OUT_DIR"), "/sources.yaml"));
 
         let config: SourcesConfig = serde_yaml::from_str(SOURCES_YAML)
             .map_err(|e| anyhow::anyhow!("Failed to parse embedded sources.yaml: {}", e))?;
@@ -138,21 +142,19 @@ impl SchemaLoader {
     /// # Returns
     /// Result indicating success or failure
     fn load_schemas_from_zip_url(&mut self, url: &str) -> Result<()> {
-        // Download the ZIP file using curl
-        let output = Command::new("curl")
-            .args(&["-L", "-s", "--fail", "--max-time", "30", url])
-            .output()?;
-        
-        if !output.status.success() {
-            return Err(anyhow::anyhow!(
-                "Failed to download ZIP from {}: {}",
-                url,
-                String::from_utf8_lossy(&output.stderr)
-            ));
-        }
-        
+        let agent: ureq::Agent = ureq::Agent::config_builder()
+            .timeout_global(Some(std::time::Duration::from_secs(30)))
+            .build()
+            .into();
+
+        let mut response = agent.get(url)
+            .call()
+            .map_err(|e| anyhow::anyhow!("HTTP request to {} failed: {}", url, e))?;
+
+        let mut bytes = Vec::new();
+        response.body_mut().as_reader().read_to_end(&mut bytes)?;
+            
         // Process the ZIP archive in memory
-        let bytes = output.stdout;
         let reader = std::io::Cursor::new(bytes);
         let mut zip = ZipArchive::new(reader)?;
         
@@ -170,23 +172,23 @@ impl SchemaLoader {
                 let schema: Value = serde_json::from_str(&content)?;
                 
                 // Extract path information to create cache key
-                let entry_path = entry.name();
-                let path_parts: Vec<&str> = entry_path.split('/').collect();
+                let entry_name = entry.name().to_string();
+                let path_parts: Vec<&str> = entry_name.split('/').collect();
                 
                 // We expect paths like: Schemas-main/bees/v1/inventory/item.json
                 if path_parts.len() >= 5 {
-                    let entry_domain = path_parts[path_parts.len() - 4];  // e.g., "bees"
-                    let entry_version = path_parts[path_parts.len() - 3]; // e.g., "v1"
-                    let entry_category = path_parts[path_parts.len() - 2]; // e.g., "inventory"
-                    let file_name = path_parts[path_parts.len() - 1];     // e.g., "item.json"
+                    let entry_domain = path_parts[path_parts.len() - 4];
+                    let entry_version = path_parts[path_parts.len() - 3];
+                    let entry_category = path_parts[path_parts.len() - 2];
+                    let file_name = path_parts[path_parts.len() - 1];
                     
-                    // Remove .json extension from filename
                     let schema_name = file_name.trim_end_matches(".json");
                     
-                    // Store in cache with proper key format
                     let cache_key = format!("{}/{}/{}/{}", entry_domain, entry_version, entry_category, schema_name);
                     self.schema_cache.insert(cache_key.clone(), schema);
                     eprintln!("Loaded schema into cache: {}", cache_key);
+                } else {
+                    eprintln!("Skipping JSON file with unexpected path structure (< 5 components): {}", entry_name);
                 }
             }
         }
