@@ -10,7 +10,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Scanner;
 import java.util.logging.Logger;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipException;
@@ -18,8 +17,8 @@ import java.util.zip.ZipInputStream;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
 /**
@@ -38,6 +37,10 @@ public class SchemaLoader {
     private final String domain;
     private final String version;
 
+    private static final int CONNECTION_TIMEOUT_MS = 15_000;
+    private static final int READ_TIMEOUT_MS = 30_000;
+    private static final long MAX_ENTRY_SIZE = 10 * 1024 * 1024; // 10 MB per ZIP entry
+
     /**
      * Creates a new SchemaLoader.
      *
@@ -46,9 +49,8 @@ public class SchemaLoader {
      * @param version    the version of the schema
      * @throws IllegalArgumentException if the schema root, domain, or version
      *                                  is null
-     * @throws IOException if the schemas could not be loaded
      */
-    public SchemaLoader(String schemaRoot, String domain, String version) throws IllegalArgumentException, IOException {
+    public SchemaLoader(String schemaRoot, String domain, String version) {
         if (schemaRoot == null || domain == null || version == null) {
             throw new IllegalArgumentException("Schema root, domain, and version must be specified.");
         }
@@ -60,7 +62,11 @@ public class SchemaLoader {
         this.domain = domain;
         this.version = version;
 
-        loadRemoteSchemas();
+        try {
+            loadRemoteSchemas();
+        } catch (IOException e) {
+            logger.warning("Remote schema loading failed, falling back to local file system only: " + e.getMessage());
+        }
     }
 
     /**
@@ -86,7 +92,7 @@ public class SchemaLoader {
                 return schema;
             }
         } catch (IOException e) {
-            logger.warning("Failed to load schema from file system: " + e.getMessage());
+            logger.warning(() -> "Failed to load schema from file system: " + e.getMessage());
         }
 
         return null;
@@ -103,113 +109,101 @@ public class SchemaLoader {
      * 
      * @throws IOException if sources could not be read or found
      */
-    public void loadRemoteSchemas() throws IOException {
+    private void loadRemoteSchemas() throws IOException {
         JsonNode settings = null;
         try (InputStream stream = getClass().getClassLoader().getResourceAsStream("application.yml")) {
             if (stream == null) {
                 logger.warning("Application Settings not found");
             } else {
-                try (// Load YAML settings using SnakeYAML or similar
-                     // For now, we'll manually parse the YAML structure
-                Scanner scanner = new Scanner(stream).useDelimiter("\\A")) {
-                    String yamlContent = scanner.hasNext() ? scanner.next() : "";
+                ObjectMapper yamlMapper = new ObjectMapper(new YAMLFactory());
+                JsonNode parsed = yamlMapper.readTree(stream);
 
-                    // Simple parsing for sources array - in a real implementation you would use a
-                    // proper YAML parser
-                    if (yamlContent.contains("sources:")) {
+                if (parsed == null || !parsed.has("sources")) {
+                    logger.warning("application.yml is missing 'sources' key");
+                } else {
+                    JsonNode sourcesNode = parsed.get("sources");
+                    if (!sourcesNode.isArray()) {
+                        logger.warning("'sources' key in application.yml is not an array");
+                    } else {
                         settings = objectMapper.createObjectNode();
-                        ArrayNode sourcesArray = objectMapper.createArrayNode();
-
-                        // Extract sources from YAML (simplified parsing)
-                        String[] lines = yamlContent.split("\n");
-                        for (String line : lines) {
-                            if (line.trim().startsWith("- ")) {
-                                String source = line.trim().substring(2).trim();
-                                if (source.startsWith("\"") && source.endsWith("\"")) {
-                                    source = source.substring(1, source.length() - 1);
-                                }
-                                sourcesArray.add(source);
-                            }
-                        }
-
-                        ((ObjectNode) settings).set("sources", sourcesArray);
+                        ((ObjectNode) settings).set("sources", objectMapper.convertValue(sourcesNode, JsonNode.class));
                     }
                 }
             }
         } catch (Exception e) {
-            logger.warning("Failed to parse application settings: " + e.getMessage());
+            logger.warning(() -> "Failed to parse application settings: " + e.getMessage());
         }
 
         boolean sourcesLoaded = false;
         if (settings != null) {
-            ArrayNode sourcesNode = (ArrayNode) settings.get("sources");
+            JsonNode sourcesNode = settings.get("sources");
             for (JsonNode node : sourcesNode) {
                 String source = node.asText();
+                HttpURLConnection connection = null;
                 try {
-                    logger.info("Attempting to load schemas from: " + source);
+                    logger.info(() -> "Attempting to load schemas from: " + source);
                     URL url = new URL(source);
-                    HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                    connection = (HttpURLConnection) url.openConnection();
                     connection.setRequestMethod("GET");
-                    InputStream in = connection.getInputStream();
-                    ZipInputStream zipIn = new ZipInputStream(in);
-                    ZipEntry entry = zipIn.getNextEntry();
+                    connection.setConnectTimeout(CONNECTION_TIMEOUT_MS);
+                    connection.setReadTimeout(READ_TIMEOUT_MS);
 
-                    while (entry != null) {
-                        // Process schema files from ZIP
-                        if (!entry.isDirectory() && entry.getName().endsWith(".json")) {
-                            // Extract schema content
-                            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                            byte[] buffer = new byte[1024];
-                            int len;
-                            while ((len = zipIn.read(buffer)) > 0) {
-                                baos.write(buffer, 0, len);
+                    try (InputStream in = connection.getInputStream();
+                         ZipInputStream zipIn = new ZipInputStream(in)) {
+
+                        ZipEntry entry = zipIn.getNextEntry();
+                        while (entry != null) {
+                            if (!entry.isDirectory() && entry.getName().endsWith(".json")) {
+                                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                                byte[] buffer = new byte[1024];
+                                long totalRead = 0;
+                                int len;
+                                while ((len = zipIn.read(buffer)) > 0) {
+                                    totalRead += len;
+                                    if (totalRead > MAX_ENTRY_SIZE) {
+                                        throw new IOException("ZIP entry exceeds maximum allowed size: " + entry.getName());
+                                    }
+                                    baos.write(buffer, 0, len);
+                                }
+
+                                byte[] content = baos.toByteArray();
+                                JsonNode schema = objectMapper.readTree(content);
+
+                                String entryPath = entry.getName();
+                                int lastSlash = entryPath.lastIndexOf('/');
+                                String fileName = lastSlash >= 0 ? entryPath.substring(lastSlash + 1) : entryPath;
+                                String categoryName = lastSlash >= 0 ? entryPath.substring(0, lastSlash) : "";
+
+                                String[] pathParts = categoryName.split("/");
+                                if (pathParts.length >= 3) {
+                                    String entryDomain = pathParts[pathParts.length - 3];
+                                    String entryVersion = pathParts[pathParts.length - 2];
+                                    String entryCategory = pathParts[pathParts.length - 1];
+                                    String schemaName = fileName.substring(0, fileName.length() - 5);
+
+                                    String cacheKey = entryDomain + "/" + entryVersion + "/" + entryCategory + "/"
+                                            + schemaName;
+                                    cache.put(cacheKey, schema);
+                                    logger.info(() -> "Loaded schema into cache: " + cacheKey);
+                                }
                             }
 
-                            // Parse and store schema in cache
-                            byte[] content = baos.toByteArray();
-                            JsonNode schema = objectMapper.readTree(content);
-
-                            // Extract category and name from path
-                            String entryPath = entry.getName();
-                            // Remove leading path parts to get relative path
-                            int lastSlash = entryPath.lastIndexOf('/');
-                            String fileName = lastSlash >= 0 ? entryPath.substring(lastSlash + 1) : entryPath;
-                            String categoryName = lastSlash >= 0 ? entryPath.substring(0, lastSlash) : "";
-
-                            // Further split category if needed
-                            String[] pathParts = categoryName.split("/");
-                            if (pathParts.length >= 3) {
-                                String entryDomain = pathParts[pathParts.length - 3];
-                                String entryVersion = pathParts[pathParts.length - 2];
-                                String entryCategory = pathParts[pathParts.length - 1];
-
-                                // Remove .json extension from filename
-                                String schemaName = fileName.substring(0, fileName.length() - 5);
-
-                                // Store in cache with proper key format
-                                String cacheKey = entryDomain + "/" + entryVersion + "/" + entryCategory + "/"
-                                        + schemaName;
-                                cache.put(cacheKey, schema);
-                                logger.info("Loaded schema into cache: " + cacheKey);
-                            }
+                            zipIn.closeEntry();
+                            entry = zipIn.getNextEntry();
                         }
-
-                        // Close current entry and move to next
-                        zipIn.closeEntry();
-                        entry = zipIn.getNextEntry();
                     }
 
                     sourcesLoaded = true;
-                    zipIn.close();
-                    in.close();
-                    logger.info("Successfully loaded schemas from: " + source);
+                    logger.info(() -> "Successfully loaded schemas from: " + source);
                     break;
                 } catch (ZipException e) {
-                    logger.warning(
-                            "Failed to process ZIP from source: " + source + ", trying next source if available");
+                    logger.warning(() -> "Failed to process ZIP from source: " + source + ", trying next source if available");
                 } catch (IOException e) {
-                    logger.warning(
-                            "IO Exception while processing source: " + source + ", trying next source if available");
+                    logger.warning(() -> "IO Exception while processing source: " + source + ", trying next source if available");
+                } finally {
+                    if (connection != null) {
+                        connection.disconnect();
+                    }
                 }
             }
         }
