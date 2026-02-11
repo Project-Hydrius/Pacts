@@ -1,12 +1,16 @@
 use anyhow::Result;
+use serde::Deserialize;
 use serde_json::Value;
 use std::collections::HashMap;
-use std::io::{Read, BufRead};
+use std::io::Read;
 use std::process::Command;
-use std::path::Path;
-use std::fs::File;
 
 use zip::read::ZipArchive;
+
+#[derive(Deserialize)]
+struct SourcesConfig {
+    sources: Vec<String>,
+}
 
 /// SchemaLoader struct that loads schemas from remote sources.
 /// 
@@ -24,7 +28,7 @@ impl SchemaLoader {
     /// Creates a new SchemaLoader and loads schemas from remote sources.
     ///
     /// # Arguments
-    /// * `schema_root` - kept for API compatibility (not used)
+    /// * `schema_root` - reserved for future local file system loading (must be non-empty)
     /// * `domain` - the domain of the schema
     /// * `version` - the version of the schema
     /// 
@@ -109,61 +113,21 @@ impl SchemaLoader {
         }
     }
     
-    /// Loads sources configuration from sources.yaml file.
-    /// 
-    /// Tries to load from rust/resources folder, then falls back to
-    /// default configuration if the file is not found.
+    /// Loads sources configuration embedded at compile time from sources.yaml.
     /// 
     /// # Returns
     /// Result containing vector of source URLs
     fn load_sources_config(&self) -> Result<Vec<String>> {
-        // Config file location
-        let config_path = Path::new("rust/resources/sources.yaml");
-        
-        if config_path.exists() {
-            eprintln!("Loading sources configuration from: {}", config_path.display());
-            let file = File::open(&config_path)?;
-            let reader = std::io::BufReader::new(file);
-            let mut sources = Vec::new();
-            let mut in_sources_section = false;
-            
-            for line in reader.lines() {
-                let line = line?;
-                let trimmed = line.trim();
-                
-                // Check if we're entering the sources section
-                if trimmed == "sources:" {
-                    in_sources_section = true;
-                    continue;
-                }
-                
-                // Parse source entries (lines starting with "- ")
-                if in_sources_section && trimmed.starts_with("- ") {
-                    let source = trimmed[2..].trim();
-                    // Remove surrounding quotes if present
-                    let source = source.trim_matches('"');
-                    if !source.is_empty() {
-                        sources.push(source.to_string());
-                    }
-                }
-                // If we hit a non-indented line after sources section, we're done
-                else if in_sources_section && !trimmed.is_empty() && !trimmed.starts_with('#') {
-                    if !line.starts_with(' ') && !line.starts_with('\t') {
-                        break;
-                    }
-                }
-            }
-            
-            if !sources.is_empty() {
-                return Ok(sources);
-            }
+        const SOURCES_YAML: &str = include_str!("../../resources/sources.yaml");
+
+        let config: SourcesConfig = serde_yaml::from_str(SOURCES_YAML)
+            .map_err(|e| anyhow::anyhow!("Failed to parse embedded sources.yaml: {}", e))?;
+
+        if config.sources.is_empty() {
+            return Err(anyhow::anyhow!("No sources defined in sources.yaml"));
         }
-        
-        // Fall back to default configuration
-        eprintln!("Warning: Could not read sources.yaml, using default configuration");
-        Ok(vec![
-            "https://github.com/Project-Hydrius/Schemas/archive/refs/heads/main.zip".to_string()
-        ])
+
+        Ok(config.sources)
     }
     
     /// Loads schemas from a ZIP file at the given URL.
