@@ -164,15 +164,25 @@ impl SchemaLoader {
             
             // Process only JSON files
             if !entry.is_dir() && entry.name().ends_with(".json") {
+                let entry_name = entry.name().to_string();
+                
                 // Read the entry content
                 let mut content = String::new();
-                entry.read_to_string(&mut content)?;
+                if let Err(e) = entry.read_to_string(&mut content) {
+                    eprintln!("Failed to read entry {} (index {}): {}", entry_name, i, e);
+                    continue;
+                }
                 
                 // Parse the JSON schema
-                let schema: Value = serde_json::from_str(&content)?;
+                let schema: Value = match serde_json::from_str(&content) {
+                    Ok(s) => s,
+                    Err(e) => {
+                        eprintln!("Failed to parse JSON for entry {} (index {}): {}", entry_name, i, e);
+                        continue;
+                    }
+                };
                 
                 // Extract path information to create cache key
-                let entry_name = entry.name().to_string();
                 let path_parts: Vec<&str> = entry_name.split('/').collect();
                 
                 // We expect paths like: Schemas-main/bees/v1/inventory/item.json
