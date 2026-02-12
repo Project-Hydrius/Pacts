@@ -22,10 +22,9 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
 /**
- * SchemaLoader class that loads schemas that are bundled with Pacts.
+ * SchemaLoader class that loads schemas.
  * 
- * This class supports loading schemas from the file system or embedded resources.
- * Remote ZIP loading functionality is available through a separate method.
+ * This class supports loading schemas from local and remote resources.
  */
 public class SchemaLoader {
 
@@ -70,7 +69,7 @@ public class SchemaLoader {
     }
 
     /**
-     * Loads a schema from cache, file system, or embedded resources.
+     * Loads a schema from cache or local resources.
      *
      * @param category The schema category (e.g., "player")
      * @param name     The schema name (e.g., "player_request")
