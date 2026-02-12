@@ -15,6 +15,8 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipException;
 import java.util.zip.ZipInputStream;
 
+import org.jetbrains.annotations.Nullable;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -75,6 +77,7 @@ public class SchemaLoader {
      * @param name     The schema name (e.g., "player_request")
      * @return The parsed JSON schema node or null if not found.
      */
+    @Nullable
     public JsonNode loadSchema(String category, String name) {
         String cacheKey = domain + "/" + version + "/" + category + "/" + name;
 
