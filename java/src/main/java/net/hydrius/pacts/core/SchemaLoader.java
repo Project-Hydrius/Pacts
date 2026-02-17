@@ -199,9 +199,9 @@ public class SchemaLoader {
                     logger.info(() -> "Successfully loaded schemas from: " + source);
                     break;
                 } catch (ZipException e) {
-                    logger.warning(() -> "Failed to process ZIP from source: " + source + ", trying next source if available");
+                    logger.warning(() -> "Failed to process ZIP from source: " + source + " (" + e.getMessage() + "), trying next source if available");
                 } catch (IOException e) {
-                    logger.warning(() -> "IO Exception while processing source: " + source + ", trying next source if available");
+                    logger.warning(() -> "IO Exception while processing source: " + source + " (" + e.getMessage() + "), trying next source if available");
                 } finally {
                     if (connection != null) {
                         connection.disconnect();
