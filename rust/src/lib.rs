@@ -15,7 +15,6 @@ mod tests {
 
     #[test]
     fn test_library_exports() {
-        // Test that all public items are accessible
         let _envelope: Envelope = Envelope::new(
             Header::new("v1".to_string(), "test".to_string(), "test".to_string()),
             json!({}),
@@ -27,13 +26,11 @@ mod tests {
         let _validator: Validator = Validator::new(_schema_loader.clone());
         let _validation_result: ValidationResult = ValidationResult::success();
 
-        // If we get here, all exports are working
         assert!(true);
     }
 
     #[test]
     fn test_basic_workflow() {
-        // Test a complete workflow from envelope creation to validation
         let header = Header::new(
             "v1".to_string(),
             "inventory".to_string(),
