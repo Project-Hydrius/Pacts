@@ -12,13 +12,14 @@ pub use model::Header;
 /// This should be called once at the start of your application.
 /// It uses env_logger with default settings.
 pub fn init_logging() {
-    env_logger::init();
+    let _ = env_logger::Builder::from_env(env_logger::Env::default()).try_init();
 }
 
 /// Initializes the logging system with custom default filter level.
 /// Example: `init_logging_with_level("info")` or `init_logging_with_level("debug")`
 pub fn init_logging_with_level(level: &str) {
-    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or(level)).init();
+    let _ = env_logger::Builder::from_env(env_logger::Env::default().default_filter_or(level))
+        .try_init();
 }
 
 #[cfg(test)]
