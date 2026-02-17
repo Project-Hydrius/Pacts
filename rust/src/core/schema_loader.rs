@@ -1,4 +1,5 @@
 use anyhow::Result;
+use log::{error, info, warn};
 use serde::Deserialize;
 use serde_json::Value;
 use std::collections::HashMap;
@@ -37,7 +38,20 @@ impl SchemaLoader {
             version,
         };
 
-        loader.load_remote_schemas().expect("Failed to load remote schemas");
+        info!(
+            "Initializing SchemaLoader with root: {}, domain: {}, version: {}",
+            loader.schema_root, loader.domain, loader.version
+        );
+
+        if let Err(e) = loader.load_remote_schemas() {
+            error!("Failed to load remote schemas: {}", e);
+            panic!("Failed to load remote schemas: {}", e);
+        }
+
+        info!(
+            "SchemaLoader initialized successfully with {} schemas in cache",
+            loader.schema_cache.len()
+        );
         loader
     }
 
@@ -88,18 +102,23 @@ impl SchemaLoader {
             match self.load_schemas_from_zip_url(&source) {
                 Ok(_) => {
                     if self.schema_cache.len() > cache_size_before {
-                        eprintln!("Successfully loaded schemas from: {}", source);
+                        info!("Successfully loaded schemas from: {}", source);
                         return Ok(());
                     }
-                    eprintln!("ZIP from {} contained no loadable schemas, trying next source", source);
+                    warn!(
+                        "ZIP from {} contained no loadable schemas, trying next source",
+                        source
+                    );
                 }
                 Err(e) => {
-                    eprintln!("Failed to load schemas from {}: {}", source, e);
+                    error!("Failed to load schemas from {}: {}", source, e);
                 }
             }
         }
 
-        Err(anyhow::anyhow!("Sources could not be read or found to populate schemas."))
+        Err(anyhow::anyhow!(
+            "Sources could not be read or found to populate schemas."
+        ))
     }
 
     fn load_sources_config(&self) -> Result<Vec<String>> {
@@ -117,7 +136,9 @@ impl SchemaLoader {
 
     fn load_schemas_from_zip_url(&mut self, url: &str) -> Result<()> {
         let agent: ureq::Agent = ureq::Agent::config_builder()
-            .timeout_global(Some(std::time::Duration::from_secs(CONNECTION_TIMEOUT_SECS)))
+            .timeout_global(Some(std::time::Duration::from_secs(
+                CONNECTION_TIMEOUT_SECS,
+            )))
             .build()
             .into();
 
@@ -144,14 +165,17 @@ impl SchemaLoader {
 
                 let mut content = String::new();
                 if let Err(e) = entry.read_to_string(&mut content) {
-                    eprintln!("Failed to read entry {} (index {}): {}", entry_name, i, e);
+                    error!("Failed to read entry {} (index {}): {}", entry_name, i, e);
                     continue;
                 }
 
                 let schema: Value = match serde_json::from_str(&content) {
                     Ok(s) => s,
                     Err(e) => {
-                        eprintln!("Failed to parse JSON for entry {} (index {}): {}", entry_name, i, e);
+                        error!(
+                            "Failed to parse JSON for entry {} (index {}): {}",
+                            entry_name, i, e
+                        );
                         continue;
                     }
                 };
@@ -170,9 +194,12 @@ impl SchemaLoader {
                     let entry_category = path_parts[path_parts.len() - 1];
                     let schema_name = file_name.trim_end_matches(".json");
 
-                    let cache_key = format!("{}/{}/{}/{}", entry_domain, entry_version, entry_category, schema_name);
+                    let cache_key = format!(
+                        "{}/{}/{}/{}",
+                        entry_domain, entry_version, entry_category, schema_name
+                    );
                     self.schema_cache.insert(cache_key.clone(), schema);
-                    eprintln!("Loaded schema into cache: {}", cache_key);
+                    info!("Loaded schema into cache: {}", cache_key);
                 }
             }
         }

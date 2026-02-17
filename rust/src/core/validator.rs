@@ -94,10 +94,10 @@ impl Validator {
         }
 
         if !envelope.header.schema_category.is_empty() && !envelope.header.schema_name.is_empty() {
-            let schema = self
-                .schema_loader
-                .borrow_mut()
-                .load_schema(&envelope.header.schema_category, &envelope.header.schema_name);
+            let schema = self.schema_loader.borrow_mut().load_schema(
+                &envelope.header.schema_category,
+                &envelope.header.schema_name,
+            );
             let data_validation = self.validate_data(&envelope.data, &schema);
             errors.extend(data_validation.get_errors().to_vec());
         }
@@ -180,7 +180,12 @@ impl Validator {
                 if let Some(properties_obj) = properties.as_object() {
                     for (property_name, property_schema) in properties_obj {
                         if data.get(property_name).is_some() {
-                            self.validate_property_type(data, property_name, property_schema, errors);
+                            self.validate_property_type(
+                                data,
+                                property_name,
+                                property_schema,
+                                errors,
+                            );
                         }
                     }
                 }
