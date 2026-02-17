@@ -151,8 +151,9 @@ impl SchemaLoader {
             .call()
             .map_err(|e| anyhow::anyhow!("HTTP request to {} failed: {}", url, e))?;
 
+        const MAX_RESPONSE_SIZE: u64 = 50 * 1024 * 1024; // 50 MB total
         let mut bytes = Vec::new();
-        response.body_mut().as_reader().read_to_end(&mut bytes)?;
+        response.body_mut().as_reader().take(MAX_RESPONSE_SIZE).read_to_end(&mut bytes)?;
             
         // Process the ZIP archive in memory
         let reader = std::io::Cursor::new(bytes);
