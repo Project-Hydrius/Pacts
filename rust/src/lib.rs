@@ -21,8 +21,7 @@ mod tests {
             json!({}),
         );
 
-        let _header: Header =
-            Header::new("v1".to_string(), "test".to_string(), "test".to_string());
+        let _header: Header = Header::new("v1".to_string(), "test".to_string(), "test".to_string());
         let _schema_loader: SchemaLoader =
             SchemaLoader::new("schemas".to_string(), "bees".to_string(), "v1".to_string());
         let _validator: Validator = Validator::new(_schema_loader.clone());

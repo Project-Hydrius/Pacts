@@ -25,7 +25,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
 /**
  * SchemaLoader class that loads schemas.
- * 
+ *
  * This class supports loading schemas from local and remote resources.
  */
 public class SchemaLoader {
@@ -102,13 +102,13 @@ public class SchemaLoader {
 
     /**
      * Loads schemas from remote ZIP files specified in application.yml.
-     * 
+     *
      * This method processes ZIP files in memory without writing to disk,
      * extracting all JSON schema files and storing them in an in-memory cache.
-     * 
+     *
      * The loader supports multiple source URLs for redundancy, trying each one
      * in order until a successful load occurs.
-     * 
+     *
      * @throws IOException if sources could not be read or found
      */
     private void loadRemoteSchemas() throws IOException {

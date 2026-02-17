@@ -1,19 +1,16 @@
 package net.hydrius.pacts.impl;
 
-import java.util.List;
-
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import java.io.IOException;
+import java.util.List;
 import net.hydrius.pacts.core.SchemaLoader;
 import net.hydrius.pacts.core.ValidationResult;
 import net.hydrius.pacts.core.Validator;
 import net.hydrius.pacts.model.Envelope;
 import net.hydrius.pacts.model.Header;
-
-import java.io.IOException;
 
 /**
  * Service class for convenient Pacts operations
@@ -40,7 +37,12 @@ public class PactsService {
      * @return the envelope
      */
     public Envelope createEnvelope(String category, String name, Object data) {
-        Header header = new Header(schemaLoader.getVersion(), category, name, "application/json");
+        Header header = new Header(
+            schemaLoader.getVersion(),
+            category,
+            name,
+            "application/json"
+        );
         return new Envelope(header, data);
     }
 
@@ -63,18 +65,28 @@ public class PactsService {
      * @return the validation result
      * @throws IOException if the schema is not found
      */
-    public ValidationResult validateData(Object data, String category, String name) throws IOException {
+    public ValidationResult validateData(
+        Object data,
+        String category,
+        String name
+    ) throws IOException {
         JsonNode schema = schemaLoader.loadSchema(category, name);
 
         if (schema == null) {
             ValidationResult result = new ValidationResult();
             result.setValid(false);
-            result.setErrors(List.of(
-                    "Schema not found: "
-                    + schemaLoader.getDomain() + "/"
-                    + schemaLoader.getVersion() + "/"
-                    + category + "/" + name
-            ));
+            result.setErrors(
+                List.of(
+                    "Schema not found: " +
+                        schemaLoader.getDomain() +
+                        "/" +
+                        schemaLoader.getVersion() +
+                        "/" +
+                        category +
+                        "/" +
+                        name
+                )
+            );
             return result;
         }
 
@@ -92,16 +104,18 @@ public class PactsService {
      * @throws Exception if the validation fails
      */
     public <T> T sendValidatedData(
-            String category,
-            String name,
-            Object data,
-            MessageSender<T> sender
+        String category,
+        String name,
+        Object data,
+        MessageSender<T> sender
     ) throws Exception {
         Envelope envelope = createEnvelope(category, name, data);
         ValidationResult result = validate(envelope);
 
         if (!result.isValid()) {
-            throw new ValidationException("Validation failed: " + result.getErrorMessage());
+            throw new ValidationException(
+                "Validation failed: " + result.getErrorMessage()
+            );
         }
 
         return sender.send(envelope);
@@ -147,6 +161,7 @@ public class PactsService {
      * Custom exception for validation errors
      */
     public static class ValidationException extends Exception {
+
         public ValidationException(String message) {
             super(message);
         }

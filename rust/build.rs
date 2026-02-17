@@ -13,6 +13,9 @@ fn main() {
         fs::copy(&source_file, &dest_file).expect("Failed to copy sources.yaml");
         println!("cargo:rerun-if-changed={}", source_file.display());
     } else {
-        panic!("sources.yaml not found in resources folder: {}", source_file.display());
+        panic!(
+            "sources.yaml not found in resources folder: {}",
+            source_file.display()
+        );
     }
 }

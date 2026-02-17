@@ -1,8 +1,7 @@
 package net.hydrius.pacts.model;
 
-import java.time.Instant;
-
 import com.fasterxml.jackson.annotation.JsonProperty;
+import java.time.Instant;
 
 /**
  * Header class that contains metadata about the envelope
@@ -24,8 +23,7 @@ public class Header {
     @JsonProperty("content_type")
     private String contentType;
 
-    public Header() {
-    }
+    public Header() {}
 
     /**
      * Creates a new header with the given schema version, category, and name
@@ -34,7 +32,11 @@ public class Header {
      * @param schemaCategory the category of the schema
      * @param schemaName the name of the schema
      */
-    public Header(String schemaVersion, String schemaCategory, String schemaName) {
+    public Header(
+        String schemaVersion,
+        String schemaCategory,
+        String schemaName
+    ) {
         this.schemaVersion = schemaVersion;
         this.schemaCategory = schemaCategory;
         this.schemaName = schemaName;
@@ -50,7 +52,12 @@ public class Header {
      * @param schemaName the name of the schema
      * @param contentType the content type of the schema
      */
-    public Header(String schemaVersion, String schemaCategory, String schemaName, String contentType) {
+    public Header(
+        String schemaVersion,
+        String schemaCategory,
+        String schemaName,
+        String contentType
+    ) {
         this.schemaVersion = schemaVersion;
         this.schemaCategory = schemaCategory;
         this.schemaName = schemaName;
@@ -147,5 +154,4 @@ public class Header {
     public void setContentType(String contentType) {
         this.contentType = contentType;
     }
-
 }
