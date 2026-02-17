@@ -1,0 +1,6 @@
+logging:
+  level:
+    root: INFO
+    net.hydrius: DEBUG
+sources:
+  - "https://github.com/Project-Hydrius/Schemas/releases/download/2026.02.13.0126/schemas.zip"

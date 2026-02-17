@@ -3,25 +3,19 @@ use std::fs;
 use std::path::Path;
 
 fn main() {
-    // Get the directory where the build script is located
-    let manifest_dir = env::var("CARGO_MANIFEST_DIR").unwrap();
-    let schemas_dir = Path::new(&manifest_dir).parent().unwrap().join("schemas");
-    let version_file = schemas_dir.join("VERSION");
+    let manifest_dir = env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not set");
+    let source_file = Path::new(&manifest_dir).join("resources/sources.yaml");
 
-    // Tell Cargo to rerun this build script if the schemas directory changes
-    println!("cargo:rerun-if-changed={}", schemas_dir.display());
+    let out_dir = env::var("OUT_DIR").expect("OUT_DIR not set");
+    let dest_file = Path::new(&out_dir).join("sources.yaml");
 
-    // Pass schema path into build
-    if schemas_dir.exists() {
-        println!("cargo:rustc-env=SCHEMAS_DIR={}", schemas_dir.display());
-    }
-
-    // Read schema version and expose it
-    if version_file.exists() {
-        let version = fs::read_to_string(version_file)
-            .expect("Failed to read schema version file")
-            .trim()
-            .to_string();
-        println!("cargo:rustc-env=SCHEMA_VERSION={}", version);
+    if source_file.exists() {
+        fs::copy(&source_file, &dest_file).expect("Failed to copy sources.yaml");
+        println!("cargo:rerun-if-changed={}", source_file.display());
+    } else {
+        panic!(
+            "sources.yaml not found in resources folder: {}",
+            source_file.display()
+        );
     }
 }

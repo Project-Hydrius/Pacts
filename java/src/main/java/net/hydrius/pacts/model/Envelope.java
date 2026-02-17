@@ -1,8 +1,7 @@
 package net.hydrius.pacts.model;
 
-import java.util.Map;
-
 import com.fasterxml.jackson.annotation.JsonProperty;
+import java.util.Map;
 
 /**
  * Envelope class that wraps data with metadata for schema validation
@@ -18,8 +17,7 @@ public class Envelope {
     @JsonProperty("metadata")
     private Map<String, Object> metadata;
 
-    public Envelope() {
-    }
+    public Envelope() {}
 
     /**
      * Creates a new envelope with header and data

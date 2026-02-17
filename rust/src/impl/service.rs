@@ -74,8 +74,7 @@ impl PactsService {
     where
         F: FnOnce(&Envelope) -> Result<T, String>,
     {
-        let envelope =
-            self.create_envelope(schema_category, schema_name, data);
+        let envelope = self.create_envelope(schema_category, schema_name, data);
         let result = self.validate(&envelope);
 
         if result.is_valid() {

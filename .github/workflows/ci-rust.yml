@@ -5,9 +5,7 @@ on:
     branches:
       - main
     paths:
-      - "schemas/**"
       - "rust/**"
-      - "rust/Cargo.toml"
   workflow_dispatch:
 
 jobs:
@@ -24,6 +22,8 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@v1
@@ -41,49 +41,42 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-
 
-      - name: Read Schema Version
-        id: schema
-        run: |
-          SCHEMA_VERSION=$(cat ../schemas/VERSION | tr -d '\n')
-          echo "Using schema version: $SCHEMA_VERSION"
-          echo "schema_version=$SCHEMA_VERSION" >> $GITHUB_OUTPUT
-
-      - name: Read Implementation Version
-        id: impl
-        run: |
-          IMPL_VERSION=$(grep '^version = ' Cargo.toml | sed 's/version = "\(.*\)"/\1/')
-          echo "Using implementation version: $IMPL_VERSION"
-          echo "impl_version=$IMPL_VERSION" >> $GITHUB_OUTPUT
-
-      - name: Create Combined Version
+      - name: Read Version
         id: version
         run: |
-          COMBINED_VERSION="${{ steps.impl.outputs.impl_version }}+schema.${{ steps.schema.outputs.schema_version }}"
-          echo "Using combined version: $COMBINED_VERSION"
-          echo "combined_version=$COMBINED_VERSION" >> $GITHUB_OUTPUT
+          VERSION=$(grep '^version = ' Cargo.toml | sed 's/version = "\(.*\)"/\1/')
+          echo "value=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Generate Changelog
+        id: changelog
+        run: |
+          TAG="rust-v${{ steps.version.outputs.value }}"
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            LOG=$(git log "$TAG"..HEAD --oneline -- ../rust)
+          else
+            LOG=$(git log --oneline -20 -- ../rust)
+          fi
+          EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
+          echo "body<<$EOF" >> $GITHUB_OUTPUT
+          echo "$LOG" >> $GITHUB_OUTPUT
+          echo "$EOF" >> $GITHUB_OUTPUT
 
       - name: Build
         run: cargo build --release
 
-      - name: Run tests
+      - name: Run Tests
         run: cargo test
-
-      - name: Rename staticlib for GitHub Release
-        run: |
-          cp target/release/libpacts.a target/release/libpacts-${{ steps.version.outputs.combined_version }}.a
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: rust-v${{ steps.version.outputs.combined_version }}
-          name: Rust Crate v${{ steps.version.outputs.combined_version }}
+          tag_name: rust-v${{ steps.version.outputs.value }}
+          name: Rust v${{ steps.version.outputs.value }}
           body: |
-            Rust crate release for version ${{ steps.version.outputs.combined_version }}
+            ## Rust Crate v${{ steps.version.outputs.value }}
 
-            Changes:
-            - Implementation version: ${{ steps.impl.outputs.impl_version }}
-            - Schema version: ${{ steps.schema.outputs.schema_version }}
+            ${{ steps.changelog.outputs.body }}
           files: |
-            rust/target/release/libpacts-${{ steps.version.outputs.combined_version }}.a
+            rust/target/release/libpacts.a
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

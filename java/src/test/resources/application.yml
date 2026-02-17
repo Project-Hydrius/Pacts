@@ -6,3 +6,5 @@ logging:
     org.springframework.amqp.rabbit.listener.SimpleMessageListenerContainer: DEBUG
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+sources:
+  - "https://github.com/Project-Hydrius/Schemas/releases/download/2026.02.13.0126/schemas.zip"
