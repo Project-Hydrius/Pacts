@@ -1,96 +1,97 @@
-name: Build & Publish Java Package
+name: Build, Publish, & Deploy Java Package
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - "java/**"
-  workflow_dispatch:
+    push:
+        branches:
+            - main
+        paths:
+            - "java/**"
+    workflow_dispatch:
 
 jobs:
-  build-java:
-    name: Build and Publish Java Package
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      packages: write
-
-    defaults:
-      run:
-        working-directory: java
-
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Set up JDK
-        uses: actions/setup-java@v4
-        with:
-          distribution: "temurin"
-          java-version: 17
-          cache: "maven"
-
-      - name: Configure Maven for GitHub Packages
-        run: |
-          mkdir -p ~/.m2
-          cat > ~/.m2/settings.xml <<EOF
-          <settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
-                    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-                    xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 https://maven.apache.org/xsd/settings-1.0.0.xsd">
-            <servers>
-              <server>
-                <id>github</id>
-                <username>${{ github.actor }}</username>
-                <password>${{ secrets.GITHUB_TOKEN }}</password>
-              </server>
-            </servers>
-          </settings>
-          EOF
-
-      - name: Read Version
-        id: version
-        run: |
-          VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
-          echo "value=$VERSION" >> $GITHUB_OUTPUT
-
-      - name: Generate Changelog
-        id: changelog
-        run: |
-          TAG="java-v${{ steps.version.outputs.value }}"
-          if git rev-parse "$TAG" >/dev/null 2>&1; then
-            LOG=$(git log "$TAG"..HEAD --oneline -- ../java)
-          else
-            LOG=$(git log --oneline -20 -- ../java)
-          fi
-          EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
-          echo "body<<$EOF" >> $GITHUB_OUTPUT
-          echo "$LOG" >> $GITHUB_OUTPUT
-          echo "$EOF" >> $GITHUB_OUTPUT
-
-      - name: Build with Maven
-        run: mvn clean package
-
-      - name: Publish to GitHub Packages
+    build-java:
+        name: Build and Publish Java Package
+        runs-on: ubuntu-latest
+        permissions:
+            contents: write
+            packages: write
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_ACTOR: ${{ github.actor }}
-        run: mvn deploy --batch-mode
+            NEXUS_USERNAME: ${{ secrets.NEXUS_USERNAME }}
+            NEXUS_PASSWORD: ${{ secrets.NEXUS_TOKEN }}
 
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: java-v${{ steps.version.outputs.value }}
-          name: Java v${{ steps.version.outputs.value }}
-          body: |
-            ## Java Package v${{ steps.version.outputs.value }}
+        defaults:
+            run:
+                working-directory: java
 
-            ${{ steps.changelog.outputs.body }}
-          files: |
-            java/target/pacts-${{ steps.version.outputs.value }}.jar
-            java/target/pacts-${{ steps.version.outputs.value }}-sources.jar
-            java/target/pacts-${{ steps.version.outputs.value }}-javadoc.jar
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        steps:
+            - name: Checkout Code
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+
+            - name: Set up JDK
+              uses: actions/setup-java@v4
+              with:
+                  distribution: "temurin"
+                  java-version: 17
+                  cache: "maven"
+
+            - name: Generate dynamic Maven settings.xml
+              run: |
+                  cat > "$RUNNER_TEMP/settings.xml" <<'EOF'
+                  <settings xmlns="http://maven.apache.org/SETTINGS/1.2.0"
+                            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                            xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.2.0 https://maven.apache.org/xsd/settings-1.2.0.xsd">
+                    <servers>
+                      <server>
+                        <id>wyrmlings-repository-releases</id>
+                        <username>${env.NEXUS_USERNAME}</username>
+                        <password>${env.NEXUS_PASSWORD}</password>
+                      </server>
+                      <server>
+                        <id>wyrmlings-repository-snapshots</id>
+                        <username>${env.NEXUS_USERNAME}</username>
+                        <password>${env.NEXUS_PASSWORD}</password>
+                      </server>
+                    </servers>
+                  </settings>
+                  EOF
+
+            - name: Read Version
+              id: version
+              run: |
+                  VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+                  echo "value=$VERSION" >> $GITHUB_OUTPUT
+
+            - name: Generate Changelog
+              id: changelog
+              run: |
+                  TAG="java-v${{ steps.version.outputs.value }}"
+                  if git rev-parse "$TAG" >/dev/null 2>&1; then
+                    LOG=$(git log "$TAG"..HEAD --oneline -- ../java)
+                  else
+                    LOG=$(git log --oneline -20 -- ../java)
+                  fi
+                  EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
+                  echo "body<<$EOF" >> $GITHUB_OUTPUT
+                  echo "$LOG" >> $GITHUB_OUTPUT
+                  echo "$EOF" >> $GITHUB_OUTPUT
+
+            - name: Create GitHub Release
+              uses: softprops/action-gh-release@v2
+              with:
+                  tag_name: java-v${{ steps.version.outputs.value }}
+                  name: Java v${{ steps.version.outputs.value }}
+                  body: |
+                      ## Java Package v${{ steps.version.outputs.value }}
+
+                      ${{ steps.changelog.outputs.body }}
+                  files: |
+                      java/target/pacts-${{ steps.version.outputs.value }}.jar
+                      java/target/pacts-${{ steps.version.outputs.value }}-sources.jar
+                      java/target/pacts-${{ steps.version.outputs.value }}-javadoc.jar
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Publish to Sonatype Nexus
+              run: mvn -B deploy --file pom.xml -s "$RUNNER_TEMP/settings.xml"
