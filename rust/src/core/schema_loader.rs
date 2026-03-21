@@ -19,28 +19,26 @@ const MAX_RESPONSE_SIZE: u64 = 50 * 1024 * 1024;
 #[derive(Clone)]
 pub struct SchemaLoader {
     schema_cache: HashMap<String, Value>,
-    schema_root: String,
     domain: String,
     version: String,
 }
 
 impl SchemaLoader {
-    /// Creates a new SchemaLoader with the specified schema root, domain, and version.
-    pub fn new(schema_root: String, domain: String, version: String) -> Self {
-        if schema_root.is_empty() || domain.is_empty() || version.is_empty() {
-            panic!("Schema root, domain, and version must be specified.");
+    /// Creates a new SchemaLoader with the specified domain and version.
+    pub fn new(domain: String, version: String) -> Self {
+        if domain.is_empty() || version.is_empty() {
+            panic!("Domain and version must be specified.");
         }
 
         let mut loader = Self {
             schema_cache: HashMap::new(),
-            schema_root,
             domain,
             version,
         };
 
         info!(
-            "Initializing SchemaLoader with root: {}, domain: {}, version: {}",
-            loader.schema_root, loader.domain, loader.version
+            "Initializing SchemaLoader with domain: {}, version: {}",
+            loader.domain, loader.version
         );
 
         if let Err(e) = loader.load_remote_schemas() {
@@ -72,11 +70,6 @@ impl SchemaLoader {
     /// Clears all cached schemas.
     pub fn clear_cache(&mut self) {
         self.schema_cache.clear();
-    }
-
-    /// Returns the schema root directory.
-    pub fn get_schema_root(&self) -> &str {
-        &self.schema_root
     }
 
     /// Returns the domain.

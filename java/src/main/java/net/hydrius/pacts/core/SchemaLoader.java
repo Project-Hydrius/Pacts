@@ -4,10 +4,9 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Logger;
@@ -17,11 +16,10 @@ import java.util.zip.ZipInputStream;
 
 import org.jetbrains.annotations.Nullable;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.node.ObjectNode;
+import tools.jackson.dataformat.yaml.YAMLMapper;
 
 /**
  * SchemaLoader class that loads schemas.
@@ -30,11 +28,10 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
  */
 public class SchemaLoader {
 
-    private final ObjectMapper objectMapper;
+    private final JsonMapper jsonMapper;
     private final Map<String, JsonNode> cache;
     private static final Logger logger = Logger.getLogger(SchemaLoader.class.getName());
 
-    private final String schemaRoot;
     private final String domain;
     private final String version;
 
@@ -45,21 +42,17 @@ public class SchemaLoader {
     /**
      * Creates a new SchemaLoader.
      *
-     * @param schemaRoot the directory containing the schemas
      * @param domain     the domain of the schema
      * @param version    the version of the schema
-     * @throws IllegalArgumentException if the schema root, domain, or version
-     *                                  is null
+     * @throws IllegalArgumentException if the domain or version is null or invalid
      */
-    public SchemaLoader(String schemaRoot, String domain, String version) {
-        if (schemaRoot == null || domain == null || version == null) {
-            throw new IllegalArgumentException("Schema root, domain, and version must be specified.");
+    public SchemaLoader(String domain, String version) {
+        if (domain == null || version == null) {
+            throw new IllegalArgumentException("A valid domain and version must be specified.");
         }
 
-        this.objectMapper = new ObjectMapper();
-        this.objectMapper.registerModule(new JavaTimeModule());
+        this.jsonMapper = JsonMapper.builder().build();
         this.cache = new HashMap<>();
-        this.schemaRoot = schemaRoot;
         this.domain = domain;
         this.version = version;
 
@@ -85,18 +78,6 @@ public class SchemaLoader {
             return cache.get(cacheKey);
         }
 
-        // Try to load from file system
-        try {
-            Path schemaPath = Paths.get(schemaRoot, domain, version, category, name + ".json");
-            if (Files.exists(schemaPath)) {
-                JsonNode schema = objectMapper.readTree(schemaPath.toFile());
-                cache.put(cacheKey, schema);
-                return schema;
-            }
-        } catch (IOException e) {
-            logger.warning(() -> "Failed to load schema from file system: " + e.getMessage());
-        }
-
         return null;
     }
 
@@ -117,7 +98,7 @@ public class SchemaLoader {
             if (stream == null) {
                 logger.warning("Application Settings not found");
             } else {
-                ObjectMapper yamlMapper = new ObjectMapper(new YAMLFactory());
+                YAMLMapper yamlMapper = new YAMLMapper();
                 JsonNode parsed = yamlMapper.readTree(stream);
 
                 if (parsed == null || !parsed.has("sources")) {
@@ -127,8 +108,8 @@ public class SchemaLoader {
                     if (!sourcesNode.isArray()) {
                         logger.warning("'sources' key in application.yml is not an array");
                     } else {
-                        settings = objectMapper.createObjectNode();
-                        ((ObjectNode) settings).set("sources", objectMapper.convertValue(sourcesNode, JsonNode.class));
+                        settings = jsonMapper.createObjectNode();
+                        ((ObjectNode) settings).set("sources", jsonMapper.convertValue(sourcesNode, JsonNode.class));
                     }
                 }
             }
@@ -140,11 +121,11 @@ public class SchemaLoader {
         if (settings != null) {
             JsonNode sourcesNode = settings.get("sources");
             for (JsonNode node : sourcesNode) {
-                String source = node.asText();
+                String source = node.asString();
                 HttpURLConnection connection = null;
                 try {
                     logger.info(() -> "Attempting to load schemas from: " + source);
-                    URL url = new URL(source);
+                    URL url = new URI(source).toURL();
                     connection = (HttpURLConnection) url.openConnection();
                     connection.setRequestMethod("GET");
                     connection.setConnectTimeout(CONNECTION_TIMEOUT_MS);
@@ -169,7 +150,7 @@ public class SchemaLoader {
                                 }
 
                                 byte[] content = baos.toByteArray();
-                                JsonNode schema = objectMapper.readTree(content);
+                                JsonNode schema = jsonMapper.readTree(content);
 
                                 String entryPath = entry.getName();
                                 int lastSlash = entryPath.lastIndexOf('/');
@@ -202,6 +183,8 @@ public class SchemaLoader {
                     logger.warning(() -> "Failed to process ZIP from source: " + source + " (" + e.getMessage() + "), trying next source if available");
                 } catch (IOException e) {
                     logger.warning(() -> "IO Exception while processing source: " + source + " (" + e.getMessage() + "), trying next source if available");
+                } catch (URISyntaxException e) {
+                    logger.warning(() -> "Invalid URI syntax for source: " + source + " (" + e.getMessage() + "), trying next source if available");
                 } finally {
                     if (connection != null) {
                         connection.disconnect();
@@ -220,15 +203,6 @@ public class SchemaLoader {
      */
     public void clearCache() {
         cache.clear();
-    }
-
-    /**
-     * Gets the schema root.
-     *
-     * @return the schema root
-     */
-    public String getSchemaRoot() {
-        return schemaRoot;
     }
 
     /**

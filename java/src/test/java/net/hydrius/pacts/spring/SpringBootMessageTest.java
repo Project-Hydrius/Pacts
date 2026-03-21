@@ -18,11 +18,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.ObjectNode;
 
 import net.hydrius.pacts.core.ValidationResult;
 import net.hydrius.pacts.impl.PactsService;
@@ -49,9 +49,9 @@ public class SpringBootMessageTest {
     private RabbitTemplate rabbitTemplate;
 
     @Autowired
-    private ObjectMapper objectMapper;
+    private JsonMapper jsonMapper;
 
-    void sendMessage(JsonNode json, String schemaCategory, String schemaName) throws JsonProcessingException {
+    void sendMessage(JsonNode json, String schemaCategory, String schemaName) throws JacksonException {
         logger.debug("Preparing to send message for schema: {}/{}", schemaCategory, schemaName);
 
         Envelope envelope = pactsService.createEnvelope(schemaCategory, schemaName, json);
@@ -89,9 +89,9 @@ public class SpringBootMessageTest {
                 Assertions.assertTrue(e.getMessage().contains(expectedErrorSubstring),
                         "Error message should contain: " + expectedErrorSubstring + ", but was: " + e.getMessage());
             }
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             logger.error("JSON processing error during validation test", e);
-            Assertions.fail("Expected IllegalArgumentException but got JsonProcessingException: " + e.getMessage());
+            Assertions.fail("Expected IllegalArgumentException but got JacksonException: " + e.getMessage());
         }
     }
 
@@ -100,7 +100,7 @@ public class SpringBootMessageTest {
     void goodPayload_processesEnvelopeAndValidates() throws Exception {
         logger.info("Testing valid player request payload");
 
-        var payload = objectMapper.createObjectNode()
+        var payload = jsonMapper.createObjectNode()
                 .put("request_type", "PLAYER_JOIN")
                 .put("target_id", UUID.randomUUID().toString())
                 .put("date", Instant.now().toString());
@@ -114,7 +114,7 @@ public class SpringBootMessageTest {
     void missingDate_throwsHelpfulError() {
         logger.info("Testing player request with missing date field");
 
-        var payload = objectMapper.createObjectNode()
+        var payload = jsonMapper.createObjectNode()
                 .put("request_type", "PLAYER_JOIN")
                 .put("target_id", UUID.randomUUID().toString());
 
@@ -127,7 +127,7 @@ public class SpringBootMessageTest {
     void missingTargetId_throwsValidationError() {
         logger.info("Testing player request with missing target_id field");
 
-        var payload = objectMapper.createObjectNode()
+        var payload = jsonMapper.createObjectNode()
                 .put("request_type", "PLAYER_LEAVE")
                 .put("date", Instant.now().toString());
 
@@ -140,7 +140,7 @@ public class SpringBootMessageTest {
     void missingRequestType_throwsValidationError() {
         logger.info("Testing player request with missing request_type field");
 
-        var payload = objectMapper.createObjectNode()
+        var payload = jsonMapper.createObjectNode()
                 .put("target_id", UUID.randomUUID().toString())
                 .put("date", Instant.now().toString());
 
@@ -153,7 +153,7 @@ public class SpringBootMessageTest {
     void validBasicInventoryItem_shouldValidate() {
         logger.info("Testing valid basic inventory item");
 
-        var payload = objectMapper.createObjectNode()
+        var payload = jsonMapper.createObjectNode()
                 .put("slot", 1)
                 .put("material", "diamond_sword")
                 .put("amount", 1);
@@ -170,13 +170,13 @@ public class SpringBootMessageTest {
     void inventoryItemWithEnchantments_shouldValidate() {
         logger.info("Testing inventory item with enchantments");
 
-        ArrayNode enchantments = objectMapper.createArrayNode();
-        ObjectNode enchantment = objectMapper.createObjectNode()
+        ArrayNode enchantments = jsonMapper.createArrayNode();
+        ObjectNode enchantment = jsonMapper.createObjectNode()
                 .put("enchantment_id", "sharpness")
                 .put("enchantment_level", 5);
         enchantments.add(enchantment);
 
-        var payload = objectMapper.createObjectNode()
+        var payload = jsonMapper.createObjectNode()
                 .put("slot", 2)
                 .put("material", "diamond_sword")
                 .put("amount", 1)
@@ -195,29 +195,29 @@ public class SpringBootMessageTest {
         logger.info("Testing inventory item with complex NBT data");
 
         // Create nectar statistics
-        ArrayNode statistics = objectMapper.createArrayNode();
-        ObjectNode stat = objectMapper.createObjectNode()
+        ArrayNode statistics = jsonMapper.createArrayNode();
+        ObjectNode stat = jsonMapper.createObjectNode()
                 .put("type", "attack_damage")
                 .put("value", 10.5)
                 .put("boosts", 3);
         statistics.add(stat);
 
         // Create nectar data
-        ArrayNode nectar = objectMapper.createArrayNode();
-        ObjectNode nectarSlot = objectMapper.createObjectNode()
+        ArrayNode nectar = jsonMapper.createArrayNode();
+        ObjectNode nectarSlot = jsonMapper.createObjectNode()
                 .put("slot", 1)
                 .set("statistics", statistics);
         nectar.add(nectarSlot);
 
         // Create NBT data
-        ObjectNode nbtData = objectMapper.createObjectNode()
+        ObjectNode nbtData = jsonMapper.createObjectNode()
                 .put("id", "unique_sword_123")
                 .put("rarity", "legendary")
                 .put("level", 50)
                 .put("modifier", "fire_aspect")
                 .set("nectar", nectar);
 
-        var payload = objectMapper.createObjectNode()
+        var payload = jsonMapper.createObjectNode()
                 .put("slot", 3)
                 .put("material", "legendary_sword")
                 .put("amount", 1)
@@ -235,7 +235,7 @@ public class SpringBootMessageTest {
     void inventoryItemMissingRequiredFields_shouldFail() {
         logger.info("Testing inventory item with missing required fields");
 
-        var payload = objectMapper.createObjectNode()
+        var payload = jsonMapper.createObjectNode()
                 .put("slot", 1); // Missing material and amount
 
         Envelope envelope = pactsService.createEnvelope("inventory", "inventory_item", payload);
@@ -251,14 +251,14 @@ public class SpringBootMessageTest {
     void inventoryRequestWithInventoryArray_shouldValidate() {
         logger.info("Testing inventory request with inventory array");
 
-        ArrayNode inventory = objectMapper.createArrayNode();
-        ObjectNode item = objectMapper.createObjectNode()
+        ArrayNode inventory = jsonMapper.createArrayNode();
+        ObjectNode item = jsonMapper.createObjectNode()
                 .put("slot", 1)
                 .put("material", "diamond")
                 .put("amount", 64);
         inventory.add(item);
 
-        var payload = objectMapper.createObjectNode()
+        var payload = jsonMapper.createObjectNode()
                 .put("date", Instant.now().toString())
                 .put("request_type", "GET_INVENTORY")
                 .put("target_id", UUID.randomUUID().toString())
@@ -277,7 +277,7 @@ public class SpringBootMessageTest {
     void inventoryRequestWithSlot_shouldValidate() {
         logger.info("Testing inventory request with slot");
 
-        var payload = objectMapper.createObjectNode()
+        var payload = jsonMapper.createObjectNode()
                 .put("date", Instant.now().toString())
                 .put("request_type", "GET_SLOT")
                 .put("target_id", UUID.randomUUID().toString())
@@ -296,7 +296,7 @@ public class SpringBootMessageTest {
     void inventoryRequestMissingProfileId_shouldFail() {
         logger.info("Testing inventory request with missing profile_id");
 
-        var payload = objectMapper.createObjectNode()
+        var payload = jsonMapper.createObjectNode()
                 .put("date", Instant.now().toString())
                 .put("request_type", "GET_INVENTORY")
                 .put("target_id", UUID.randomUUID().toString())
@@ -315,7 +315,7 @@ public class SpringBootMessageTest {
     void validProfileRequest_shouldValidate() {
         logger.info("Testing valid profile request");
 
-        var payload = objectMapper.createObjectNode()
+        var payload = jsonMapper.createObjectNode()
                 .put("date", Instant.now().toString())
                 .put("request_type", "GET_PROFILE")
                 .put("target_id", UUID.randomUUID().toString());
@@ -345,7 +345,7 @@ public class SpringBootMessageTest {
     void emptyPayload_shouldFailValidation() {
         logger.info("Testing empty payload validation");
 
-        var payload = objectMapper.createObjectNode();
+        var payload = jsonMapper.createObjectNode();
         sendMessageAndExpectFailure(payload, "player", "player_request", null);
 
         logger.info("Empty payload validation test completed successfully");
@@ -359,7 +359,7 @@ public class SpringBootMessageTest {
         long startTime = System.currentTimeMillis();
 
         for (int i = 0; i < 100; i++) {
-            var payload = objectMapper.createObjectNode()
+            var payload = jsonMapper.createObjectNode()
                     .put("request_type", "PERFORMANCE_TEST_" + i)
                     .put("target_id", UUID.randomUUID().toString())
                     .put("date", Instant.now().toString());

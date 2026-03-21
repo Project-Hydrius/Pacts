@@ -8,8 +8,8 @@ import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
 
 import static net.hydrius.pacts.spring.SpringBootMessageTest.QUEUE;
 import net.hydrius.pacts.core.ValidationResult;
@@ -20,12 +20,12 @@ import net.hydrius.pacts.model.Envelope;
 public class TestListener {
 
     private final Logger logger = LoggerFactory.getLogger(TestListener.class);
-    private final ObjectMapper objectMapper;
+    private final JsonMapper jsonMapper;
     private final PactsService pactsService;
 
     @Autowired
-    public TestListener(ObjectMapper objectMapper, PactsService pactsService) {
-        this.objectMapper = objectMapper;
+    public TestListener(JsonMapper jsonMapper, PactsService pactsService) {
+        this.jsonMapper = jsonMapper;
         this.pactsService = pactsService;
     }
 
@@ -44,9 +44,9 @@ public class TestListener {
                 throw new IllegalArgumentException("Message validation failed: " + result.getErrors());
             }
 
-            JsonNode data = objectMapper.valueToTree(envelope.getData());
-            String type = data.path("request_type").asText("UNKNOWN");
-            String targetId = data.path("target_id").asText("UNKNOWN");
+            JsonNode data = jsonMapper.valueToTree(envelope.getData());
+            String type = data.path("request_type").asString("UNKNOWN");
+            String targetId = data.path("target_id").asString("UNKNOWN");
 
             logger.info("Successfully processed message - Type: {}, Target: {}, Schema: {}/{}",
                     type, targetId, envelope.getHeader().getSchemaCategory(), envelope.getHeader().getSchemaName());
