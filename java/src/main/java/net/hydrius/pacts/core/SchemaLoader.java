@@ -17,11 +17,10 @@ import java.util.zip.ZipInputStream;
 
 import org.jetbrains.annotations.Nullable;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.node.ObjectNode;
+import tools.jackson.dataformat.yaml.YAMLMapper;
 
 /**
  * SchemaLoader class that loads schemas.
@@ -30,7 +29,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
  */
 public class SchemaLoader {
 
-    private final ObjectMapper objectMapper;
+    private final JsonMapper jsonMapper;
     private final Map<String, JsonNode> cache;
     private static final Logger logger = Logger.getLogger(SchemaLoader.class.getName());
 
@@ -56,8 +55,7 @@ public class SchemaLoader {
             throw new IllegalArgumentException("Schema root, domain, and version must be specified.");
         }
 
-        this.objectMapper = new ObjectMapper();
-        this.objectMapper.registerModule(new JavaTimeModule());
+        this.jsonMapper = JsonMapper.builder().build();
         this.cache = new HashMap<>();
         this.schemaRoot = schemaRoot;
         this.domain = domain;
@@ -89,11 +87,11 @@ public class SchemaLoader {
         try {
             Path schemaPath = Paths.get(schemaRoot, domain, version, category, name + ".json");
             if (Files.exists(schemaPath)) {
-                JsonNode schema = objectMapper.readTree(schemaPath.toFile());
+                JsonNode schema = jsonMapper.readTree(schemaPath.toFile());
                 cache.put(cacheKey, schema);
                 return schema;
             }
-        } catch (IOException e) {
+        } catch (Exception e) {
             logger.warning(() -> "Failed to load schema from file system: " + e.getMessage());
         }
 
@@ -117,7 +115,7 @@ public class SchemaLoader {
             if (stream == null) {
                 logger.warning("Application Settings not found");
             } else {
-                ObjectMapper yamlMapper = new ObjectMapper(new YAMLFactory());
+                YAMLMapper yamlMapper = new YAMLMapper();
                 JsonNode parsed = yamlMapper.readTree(stream);
 
                 if (parsed == null || !parsed.has("sources")) {
@@ -127,8 +125,8 @@ public class SchemaLoader {
                     if (!sourcesNode.isArray()) {
                         logger.warning("'sources' key in application.yml is not an array");
                     } else {
-                        settings = objectMapper.createObjectNode();
-                        ((ObjectNode) settings).set("sources", objectMapper.convertValue(sourcesNode, JsonNode.class));
+                        settings = jsonMapper.createObjectNode();
+                        ((ObjectNode) settings).set("sources", jsonMapper.convertValue(sourcesNode, JsonNode.class));
                     }
                 }
             }
@@ -169,7 +167,7 @@ public class SchemaLoader {
                                 }
 
                                 byte[] content = baos.toByteArray();
-                                JsonNode schema = objectMapper.readTree(content);
+                                JsonNode schema = jsonMapper.readTree(content);
 
                                 String entryPath = entry.getName();
                                 int lastSlash = entryPath.lastIndexOf('/');

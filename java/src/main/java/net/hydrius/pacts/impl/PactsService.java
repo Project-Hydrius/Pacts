@@ -1,9 +1,8 @@
 package net.hydrius.pacts.impl;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
 import java.io.IOException;
 import java.util.List;
 import net.hydrius.pacts.core.SchemaLoader;
@@ -19,13 +18,12 @@ public class PactsService {
 
     private final Validator validator;
     private final SchemaLoader schemaLoader;
-    private final ObjectMapper objectMapper;
+    private final JsonMapper jsonMapper;
 
     public PactsService(SchemaLoader schemaLoader) {
         this.schemaLoader = schemaLoader;
         this.validator = new Validator(schemaLoader);
-        this.objectMapper = new ObjectMapper();
-        this.objectMapper.registerModule(new JavaTimeModule());
+        this.jsonMapper = JsonMapper.builder().build();
     }
 
     /**
@@ -124,15 +122,15 @@ public class PactsService {
     /**
      * Parses JSON string to an envelope
      */
-    public Envelope parseEnvelope(String json) throws JsonProcessingException {
-        return objectMapper.readValue(json, Envelope.class);
+    public Envelope parseEnvelope(String json) throws JacksonException {
+        return jsonMapper.readValue(json, Envelope.class);
     }
 
     /**
      * Converts envelope to JSON string
      */
-    public String toJson(Envelope envelope) throws JsonProcessingException {
-        return objectMapper.writeValueAsString(envelope);
+    public String toJson(Envelope envelope) throws JacksonException {
+        return jsonMapper.writeValueAsString(envelope);
     }
 
     /**

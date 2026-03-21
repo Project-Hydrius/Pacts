@@ -1,12 +1,10 @@
 package net.hydrius.pacts.core;
 
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
 
 import net.hydrius.pacts.model.Envelope;
 import net.hydrius.pacts.model.Header;
@@ -16,7 +14,7 @@ import net.hydrius.pacts.model.Header;
  */
 public class Validator {
 
-    private final ObjectMapper objectMapper;
+    private final JsonMapper jsonMapper;
     private final SchemaLoader schemaLoader;
 
     /**
@@ -25,8 +23,7 @@ public class Validator {
      * @param schemaLoader the schema loader to use
      */
     public Validator(SchemaLoader schemaLoader) {
-        this.objectMapper = new ObjectMapper();
-        this.objectMapper.registerModule(new JavaTimeModule());
+        this.jsonMapper = JsonMapper.builder().build();
         this.schemaLoader = schemaLoader;
     }
 
@@ -170,9 +167,7 @@ public class Validator {
     private void validateProperties(JsonNode dataNode, JsonNode schema, List<String> errors) {
         if (schema.has("properties") && dataNode.isObject()) {
             JsonNode properties = schema.get("properties");
-            Iterator<String> fieldNames = properties.fieldNames();
-            while (fieldNames.hasNext()) {
-                String propertyName = fieldNames.next();
+            for (String propertyName : properties.propertyNames()) {
                 if (dataNode.has(propertyName)) {
                     JsonNode propertySchema = properties.get(propertyName);
                     validatePropertyType(dataNode, propertyName, propertySchema, errors);
@@ -191,7 +186,7 @@ public class Validator {
     public ValidationResult validateData(Object data, JsonNode schema) {
         List<String> errors = new ArrayList<>();
 
-        JsonNode dataNode = objectMapper.valueToTree(data);
+        JsonNode dataNode = jsonMapper.valueToTree(data);
 
         validateRequiredFields(dataNode, schema, errors);
         validateType(dataNode, schema, errors);
