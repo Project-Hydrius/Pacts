@@ -45,8 +45,8 @@ public class TestListener {
             }
 
             JsonNode data = jsonMapper.valueToTree(envelope.getData());
-            String type = data.path("request_type").asText("UNKNOWN");
-            String targetId = data.path("target_id").asText("UNKNOWN");
+            String type = data.path("request_type").asString("UNKNOWN");
+            String targetId = data.path("target_id").asString("UNKNOWN");
 
             logger.info("Successfully processed message - Type: {}, Target: {}, Schema: {}/{}",
                     type, targetId, envelope.getHeader().getSchemaCategory(), envelope.getHeader().getSchemaName());

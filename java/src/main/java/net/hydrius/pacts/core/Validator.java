@@ -91,7 +91,7 @@ public class Validator {
             case "array" ->
                 data.isArray();
             case "string" ->
-                data.isTextual();
+                data.isString();
             case "number" ->
                 data.isNumber();
             case "integer" ->
@@ -116,7 +116,7 @@ public class Validator {
         if (schema.has("required")) {
             JsonNode requiredFields = schema.get("required");
             for (JsonNode field : requiredFields) {
-                String fieldName = field.asText();
+                String fieldName = field.asString();
                 if (!dataNode.has(fieldName)) {
                     errors.add("Required field missing: " + fieldName);
                 }
@@ -133,9 +133,23 @@ public class Validator {
      */
     private void validateType(JsonNode dataNode, JsonNode schema, List<String> errors) {
         if (schema.has("type")) {
-            String expectedType = schema.get("type").asText();
-            if (!validateType(dataNode, expectedType)) {
-                errors.add("Invalid type. Expected: " + expectedType);
+            JsonNode typeNode = schema.get("type");
+            if (typeNode.isArray()) {
+                boolean valid = false;
+                for (JsonNode type : typeNode) {
+                    if (validateType(dataNode, type.asString())) {
+                        valid = true;
+                        break;
+                    }
+                }
+                if (!valid) {
+                    errors.add("Invalid type. Expected one of: " + typeNode.toString());
+                }
+            } else {
+                String expectedType = typeNode.asString();
+                if (!validateType(dataNode, expectedType)) {
+                    errors.add("Invalid type. Expected: " + expectedType);
+                }
             }
         }
     }
@@ -150,9 +164,23 @@ public class Validator {
      */
     private void validatePropertyType(JsonNode dataNode, String propertyName, JsonNode propertySchema, List<String> errors) {
         if (propertySchema.has("type")) {
-            String propertyType = propertySchema.get("type").asText();
-            if (!validateType(dataNode.get(propertyName), propertyType)) {
-                errors.add("Invalid type for field '" + propertyName + "'. Expected: " + propertyType);
+            JsonNode typeNode = propertySchema.get("type");
+            if (typeNode.isArray()) {
+                boolean valid = false;
+                for (JsonNode type : typeNode) {
+                    if (validateType(dataNode.get(propertyName), type.asString())) {
+                        valid = true;
+                        break;
+                    }
+                }
+                if (!valid) {
+                    errors.add("Invalid type for field '" + propertyName + "'. Expected one of: " + typeNode.toString());
+                }
+            } else {
+                String propertyType = typeNode.asString();
+                if (!validateType(dataNode.get(propertyName), propertyType)) {
+                    errors.add("Invalid type for field '" + propertyName + "'. Expected: " + propertyType);
+                }
             }
         }
     }

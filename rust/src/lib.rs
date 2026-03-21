@@ -28,8 +28,10 @@ mod tests {
     use serde_json::json;
 
     use std::sync::Once;
+    use std::sync::OnceLock;
 
     static INIT: Once = Once::new();
+    static SCHEMA_LOADER: OnceLock<SchemaLoader> = OnceLock::new();
 
     fn init_test_logging() {
         INIT.call_once(|| {
@@ -40,18 +42,22 @@ mod tests {
         });
     }
 
+    fn get_schema_loader() -> &'static SchemaLoader {
+        SCHEMA_LOADER.get_or_init(|| {
+            init_test_logging();
+            SchemaLoader::new("bees".to_string(), "v1".to_string())
+        })
+    }
+
     #[test]
     fn test_library_exports() {
-        init_test_logging();
-
         let _envelope: Envelope = Envelope::new(
             Header::new("v1".to_string(), "test".to_string(), "test".to_string()),
             json!({}),
         );
 
         let _header: Header = Header::new("v1".to_string(), "test".to_string(), "test".to_string());
-        let _schema_loader: SchemaLoader =
-            SchemaLoader::new("schemas".to_string(), "bees".to_string(), "v1".to_string());
+        let _schema_loader = get_schema_loader();
         let _validator: Validator = Validator::new(_schema_loader.clone());
         let _validation_result: ValidationResult = ValidationResult::success();
 
@@ -60,8 +66,6 @@ mod tests {
 
     #[test]
     fn test_basic_workflow() {
-        init_test_logging();
-
         let header = Header::new(
             "v1".to_string(),
             "inventory".to_string(),
@@ -74,9 +78,8 @@ mod tests {
         });
 
         let envelope = Envelope::new(header, data);
-        let schema_loader =
-            SchemaLoader::new("schemas".to_string(), "bees".to_string(), "v1".to_string());
-        let mut validator = Validator::new(schema_loader);
+        let schema_loader = get_schema_loader();
+        let mut validator = Validator::new(schema_loader.clone());
 
         let result = validator.validate(&envelope);
 
@@ -87,10 +90,8 @@ mod tests {
     fn test_schema_loader_initialization() {
         init_test_logging();
 
-        let schema_loader =
-            SchemaLoader::new("schemas".to_string(), "bees".to_string(), "v1".to_string());
+        let schema_loader = SchemaLoader::new("bees".to_string(), "v1".to_string());
 
-        assert_eq!("schemas", schema_loader.get_schema_root());
         assert_eq!("bees", schema_loader.get_domain());
         assert_eq!("v1", schema_loader.get_version());
         assert_eq!(1, schema_loader.get_parsed_version());
@@ -98,10 +99,7 @@ mod tests {
 
     #[test]
     fn test_pacts_service_create_envelope() {
-        init_test_logging();
-
-        let service =
-            PactsService::new("schemas".to_string(), "bees".to_string(), "v1".to_string());
+        let service = PactsService::new("bees".to_string(), "v1".to_string());
 
         let player_data = json!({
             "target_id": "player-123",
@@ -123,10 +121,7 @@ mod tests {
 
     #[test]
     fn test_validate_envelope_with_null_header() {
-        init_test_logging();
-
-        let service =
-            PactsService::new("schemas".to_string(), "bees".to_string(), "v1".to_string());
+        let service = PactsService::new("bees".to_string(), "v1".to_string());
 
         let envelope = Envelope::new(
             Header::new("".to_string(), "".to_string(), "".to_string()),
@@ -222,10 +217,7 @@ mod tests {
 
     #[test]
     fn test_send_validated_data_success() {
-        init_test_logging();
-
-        let service =
-            PactsService::new("schemas".to_string(), "bees".to_string(), "v1".to_string());
+        let service = PactsService::new("bees".to_string(), "v1".to_string());
 
         let data = json!({
             "slot": 1,
@@ -248,10 +240,7 @@ mod tests {
 
     #[test]
     fn test_send_validated_data_failure() {
-        init_test_logging();
-
-        let service =
-            PactsService::new("schemas".to_string(), "bees".to_string(), "v1".to_string());
+        let service = PactsService::new("bees".to_string(), "v1".to_string());
 
         let data = json!({"invalid": "data"});
 
@@ -270,10 +259,7 @@ mod tests {
 
     #[test]
     fn test_validate_data_directly() {
-        init_test_logging();
-
-        let service =
-            PactsService::new("schemas".to_string(), "bees".to_string(), "v1".to_string());
+        let service = PactsService::new("bees".to_string(), "v1".to_string());
 
         let data = json!({
             "slot": 1,
@@ -288,14 +274,8 @@ mod tests {
 
     #[test]
     fn test_pacts_service_default() {
-        init_test_logging();
-
         let service = PactsService::default();
 
-        assert_eq!(
-            "schemas",
-            service.schema_loader().borrow().get_schema_root()
-        );
         assert_eq!("bees", service.schema_loader().borrow().get_domain());
         assert_eq!("v1", service.schema_loader().borrow().get_version());
     }

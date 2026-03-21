@@ -7,7 +7,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 
@@ -18,11 +18,12 @@ import net.hydrius.pacts.model.Envelope;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class PactsServiceTest {
 
+    private static SchemaLoader schemaLoader;
     private PactsService pactsService;
 
-    @BeforeEach
+    @BeforeAll
     void setup() throws IOException {
-        SchemaLoader schemaLoader = new SchemaLoader("schemas", "bees", "v1");
+        schemaLoader = new SchemaLoader("bees", "v1");
         pactsService = new PactsService(schemaLoader);
     }
 

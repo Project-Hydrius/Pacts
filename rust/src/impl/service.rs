@@ -11,8 +11,8 @@ pub struct PactsService {
 
 impl PactsService {
     /// Creates a new PactsService
-    pub fn new(schema_root: String, domain: String, version: String) -> Self {
-        let schema_loader = SchemaLoader::new(schema_root, domain, version);
+    pub fn new(domain: String, version: String) -> Self {
+        let schema_loader = SchemaLoader::new(domain, version);
         let validator = Validator::new(schema_loader.clone());
 
         Self {
@@ -97,6 +97,6 @@ impl PactsService {
 
 impl Default for PactsService {
     fn default() -> Self {
-        Self::new("schemas".to_string(), "bees".to_string(), "v1".to_string())
+        Self::new("bees".to_string(), "v1".to_string())
     }
 }

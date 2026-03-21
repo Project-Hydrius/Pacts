@@ -1,6 +1,6 @@
 [package]
 name = "pacts"
-version = "0.0.5"
+version = "0.1.0"
 edition = "2021"
 
 [lib]
@@ -17,7 +17,3 @@ serde_yaml = "0.9"
 ureq = "3.2.0"
 log = "0.4"
 env_logger = "0.11"
-
-[dev-dependencies]
-# tempfile temporarily removed due to Rust version compatibility issues
-# tempfile = "3.8"

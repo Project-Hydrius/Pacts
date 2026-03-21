@@ -21,7 +21,7 @@ public class PactsConfig {
 
     @Bean
     public SchemaLoader schemaLoader() throws IOException {
-        return new SchemaLoader("schemas", "bees", "v1");
+        return new SchemaLoader("bees", "v1");
     }
 
     @Bean
